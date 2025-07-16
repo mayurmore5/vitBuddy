@@ -1,17 +1,35 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
+    "target": "esnext",
+    "module": "commonjs", // <--- THIS IS THE KEY FIX FOR THE PREVIOUS ERROR
     "strict": true,
+    "jsx": "react-native",
+    "lib": [
+      "esnext"
+    ],
+    "baseUrl": ".",
     "paths": {
       "@/*": [
         "./*"
       ]
-    }
+    },
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true, // Ensures TypeScript only checks types, doesn't emit JS
+    "isolatedModules": true // Ensures each file can be compiled independently
   },
   "include": [
     "**/*.ts",
     "**/*.tsx",
     ".expo/types/**/*.ts",
-    "expo-env.d.ts"
+    "expo-env.d.ts",
+    "nativewind-env.d.ts" // Keep this if you are using NativeWind
+  ],
+  "exclude": [
+    "node_modules"
   ]
 }
