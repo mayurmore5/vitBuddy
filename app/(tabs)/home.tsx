@@ -423,16 +423,14 @@ const MapScreen = () => {
         });
       }
 
-      const receiverUid = currentChat.posterUid === user.uid ? 
-  participants.find(p => p !== user.uid) : currentChat.posterUid;
-
-await addDoc(collection(db, 'chats', chatDocId, 'messages'), {
-  senderUid: user.uid,
-  senderEmail: user.email,
-  receiverUid: receiverUid, // Use the calculated receiver
-  text: messageText,
-  createdAt: Timestamp.now(),
-});
+      // Add message to messages subcollection
+      await addDoc(collection(db, 'chats', chatDocId, 'messages'), {
+        senderUid: user.uid,
+        senderEmail: user.email,
+        receiverUid: currentChat.posterUid,
+        text: messageText,
+        createdAt: Timestamp.now(),
+      });
 
       // Update last message timestamp in chat document
       await setDoc(chatDocRef, {
