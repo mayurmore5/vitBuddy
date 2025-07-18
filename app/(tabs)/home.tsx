@@ -1,7 +1,10 @@
+
 // app/(tabs)/map.tsx
 // This file will serve as the main map screen for your Lost and Found app.
 // MODIFIED: Uses Firebase Auth/Firestore for user/data, and Appwrite Storage for photos.
 // FIXED: Chat functionality with proper Firestore operations and error handling.
+// NEW: Added a 'My Chats' modal to allow users to view and respond to messages.
+// NEW: Added search functionality for places using expo-location.
 
 import React, { useState, useEffect, useRef } from 'react';
 import {
@@ -21,6 +24,7 @@ import {
 } from 'react-native';
 import MapView, { Marker, LatLng, MapPressEvent } from 'react-native-maps';
 import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location'; // NEW: For geocoding (search)
 // Appwrite SDK imports (for Storage)
 import { Client, Storage, ID } from 'appwrite';
 // Firebase Firestore imports (for item metadata and CHAT messages)
@@ -35,6 +39,8 @@ import {
   deleteDoc,
   getDoc,
   setDoc,
+  where,
+  or,
 } from 'firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../firbase.config';
@@ -67,6 +73,17 @@ interface ChatDetails {
   itemTitle: string;
   posterUid: string;
   posterEmail: string | null;
+  otherParticipantUid: string;
+  otherParticipantEmail: string | null;
+}
+
+// NEW interface for displaying active chats
+interface ActiveChat {
+  chatId: string;
+  itemId: string;
+  itemTitle: string;
+  otherParticipantEmail: string;
+  lastMessageAt: Timestamp;
 }
 
 const { width, height } = Dimensions.get('window');
@@ -90,8 +107,9 @@ const MapScreen = () => {
   const { user, loading: authLoading } = useAuth();
 
   const [region, setRegion] = useState({
-    latitude: 37.78825,
-    longitude: -122.4324,
+    latitude: 19.0760,
+longitude: 72.8777,
+
     latitudeDelta: LATITUDE_DELTA,
     longitudeDelta: LONGITUDE_DELTA,
   });
@@ -116,6 +134,15 @@ const MapScreen = () => {
   const [newMessageText, setNewMessageText] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
   const messagesScrollViewRef = useRef<ScrollView>(null);
+
+  // --- NEW Chat List States ---
+  const [myChatsModalVisible, setMyChatsModalVisible] = useState(false);
+  const [myActiveChats, setMyActiveChats] = useState<ActiveChat[]>([]);
+  const [fetchingChats, setFetchingChats] = useState(false);
+
+  // --- NEW Search States ---
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
 
   // Reference to the MapView component
   const mapRef = useRef<MapView>(null);
@@ -146,14 +173,54 @@ const MapScreen = () => {
     return () => unsubscribe();
   }, [db]);
 
-  // --- FIXED: Chat Message Listener ---
+  // --- NEW: Fetch and listen for active chats for the current user ---
+  useEffect(() => {
+    if (!db || !user) {
+      setMyActiveChats([]);
+      return;
+    }
+    
+    setFetchingChats(true);
+    const q = query(
+      collection(db, 'chats'),
+      or(where('participant1Uid', '==', user.uid), where('participant2Uid', '==', user.uid)),
+      orderBy('lastMessageAt', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedChats: ActiveChat[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        const otherParticipantEmail = data.participant1Uid === user.uid 
+          ? data.participant2Email 
+          : data.participant1Email;
+        
+        fetchedChats.push({
+          chatId: doc.id,
+          itemId: data.itemId,
+          itemTitle: data.itemTitle,
+          otherParticipantEmail: otherParticipantEmail,
+          lastMessageAt: data.lastMessageAt,
+        });
+      });
+      setMyActiveChats(fetchedChats);
+      setFetchingChats(false);
+    }, (error) => {
+      console.error("Error fetching active chats:", error);
+      setFetchingChats(false);
+    });
+
+    return () => unsubscribe();
+  }, [db, user]);
+
+  // --- Chat Message Listener ---
   useEffect(() => {
     if (!db || !currentChat || !user) {
       setMessages([]);
       return;
     }
 
-    const participants = [user.uid, currentChat.posterUid].sort();
+    const participants = [user.uid, currentChat.otherParticipantUid].sort();
     const chatDocId = `${currentChat.itemId}_${participants[0]}_${participants[1]}`;
 
     console.log("Setting up chat listener for:", chatDocId);
@@ -182,6 +249,52 @@ const MapScreen = () => {
 
     return () => unsubscribe();
   }, [db, currentChat, user]);
+
+  // --- NEW: Handle search functionality ---
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) {
+      Alert.alert("Invalid Search", "Please enter a place name or address.");
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Permission to access location is required for searching.');
+        setIsSearching(false);
+        return;
+      }
+
+      const geocodedLocation = await Location.geocodeAsync(searchQuery);
+
+      if (geocodedLocation.length > 0) {
+        const { latitude, longitude } = geocodedLocation[0];
+        const newRegion = {
+          latitude,
+          longitude,
+          latitudeDelta: LATITUDE_DELTA,
+          longitudeDelta: LONGITUDE_DELTA,
+        };
+
+        // Animate map to the new location
+        if (mapRef.current) {
+          mapRef.current.animateToRegion(newRegion, 1000);
+        }
+        
+        // Select the location and open the modal
+        setSelectedLocation({ latitude, longitude });
+        setModalVisible(true);
+      } else {
+        Alert.alert("Location Not Found", "Could not find a location for your search query.");
+      }
+    } catch (error) {
+      console.error("Error geocoding location:", error);
+      Alert.alert("Search Error", "An error occurred while searching for the location.");
+    } finally {
+      setIsSearching(false);
+    }
+  };
 
   // --- Handle long press on map to add a new item ---
   const handleMapLongPress = (event: MapPressEvent) => {
@@ -357,6 +470,7 @@ const MapScreen = () => {
     setItemDescription('');
     setImage(null);
     setImageAsset(null);
+    setSearchQuery(''); // Clear search query on form reset
   };
 
   // --- Handle marker press to show item details ---
@@ -376,18 +490,44 @@ const MapScreen = () => {
       return;
     }
 
-    console.log("Starting chat with:", item.posterEmail, "about:", item.title);
+    // Set up the chat with the correct details
     setCurrentChat({
       itemId: item.id,
       itemTitle: item.title,
       posterUid: item.posterUid,
       posterEmail: item.posterEmail,
+      otherParticipantUid: item.posterUid, // The poster is the other participant
+      otherParticipantEmail: item.posterEmail,
     });
+    
     setChatModalVisible(true);
     setItemDetailModalVisible(false);
   };
 
-  // --- FIXED: Send Chat Message ---
+  // --- NEW: Function to open a chat from the My Chats list
+  const handleOpenChat = (chat: ActiveChat) => {
+    if (!user) return;
+
+    const participants = chat.chatId.split('_').slice(1);
+    const otherUid = participants[0] === user.uid ? participants[1] : participants[0];
+
+    // Find the item details for the chat
+    const relatedItem = items.find(item => item.id === chat.itemId);
+    const itemTitle = relatedItem ? relatedItem.title : "Item Not Found";
+
+    setCurrentChat({
+      itemId: chat.itemId,
+      itemTitle: itemTitle,
+      posterUid: relatedItem?.posterUid || '', // posterUid might not be the other participant
+      posterEmail: relatedItem?.posterEmail || '', // Store the poster's info for context
+      otherParticipantUid: otherUid,
+      otherParticipantEmail: chat.otherParticipantEmail,
+    });
+    setMyChatsModalVisible(false);
+    setChatModalVisible(true);
+  };
+
+  // --- Send Chat Message ---
   const handleSendMessage = async () => {
     if (!user || !currentChat || !newMessageText.trim()) {
       console.log("Cannot send message - missing requirements");
@@ -399,50 +539,41 @@ const MapScreen = () => {
     setNewMessageText(''); // Clear input immediately for better UX
 
     try {
-      const participants = [user.uid, currentChat.posterUid].sort();
+      // Use the otherParticipantUid for the chat doc ID
+      const participants = [user.uid, currentChat.otherParticipantUid].sort();
       const chatDocId = `${currentChat.itemId}_${participants[0]}_${participants[1]}`;
 
-      console.log("Sending message to chat:", chatDocId);
-      console.log("Message:", messageText);
-
-      // Create or ensure the chat document exists
       const chatDocRef = doc(db, 'chats', chatDocId);
       const chatDocSnapshot = await getDoc(chatDocRef);
 
       if (!chatDocSnapshot.exists()) {
-        console.log("Creating new chat document");
         await setDoc(chatDocRef, {
           itemId: currentChat.itemId,
           itemTitle: currentChat.itemTitle,
           participant1Uid: participants[0],
           participant2Uid: participants[1],
-          participant1Email: participants[0] === user.uid ? user.email : currentChat.posterEmail,
-          participant2Email: participants[1] === user.uid ? user.email : currentChat.posterEmail,
+          participant1Email: participants[0] === user.uid ? user.email : currentChat.otherParticipantEmail,
+          participant2Email: participants[1] === user.uid ? user.email : currentChat.otherParticipantEmail,
           createdAt: Timestamp.now(),
-          lastMessageAt: Timestamp.now(),
         });
       }
 
-      // Add message to messages subcollection
       await addDoc(collection(db, 'chats', chatDocId, 'messages'), {
         senderUid: user.uid,
         senderEmail: user.email,
-        receiverUid: currentChat.posterUid,
+        receiverUid: currentChat.otherParticipantUid,
         text: messageText,
         createdAt: Timestamp.now(),
       });
 
-      // Update last message timestamp in chat document
       await setDoc(chatDocRef, {
         lastMessageAt: Timestamp.now(),
       }, { merge: true });
 
-      console.log("Message sent successfully");
     } catch (error: any) {
       console.error("Error sending message:", error);
       Alert.alert("Chat Error", `Failed to send message: ${error.message}`);
-      // Restore the message text if sending failed
-      setNewMessageText(messageText);
+      setNewMessageText(messageText); // Restore the message text if sending failed
     } finally {
       setSendingMessage(false);
     }
@@ -489,6 +620,39 @@ const MapScreen = () => {
           />
         ))}
       </MapView>
+
+      {/* NEW: Search Bar and Button */}
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search for a place..."
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          onSubmitEditing={handleSearch}
+          returnKeyType="search"
+        />
+        <TouchableOpacity
+          style={styles.searchButton}
+          onPress={handleSearch}
+          disabled={isSearching}
+        >
+          {isSearching ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.searchButtonText}>Search</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {/* NEW: Button to open My Chats modal */}
+      {user && (
+        <TouchableOpacity
+          style={styles.myChatsButton}
+          onPress={() => setMyChatsModalVisible(true)}
+        >
+          <Text style={styles.myChatsButtonText}>My Chats</Text>
+        </TouchableOpacity>
+      )}
 
       {/* Modal for adding a new item */}
       <Modal
@@ -601,7 +765,50 @@ const MapScreen = () => {
         </View>
       </Modal>
 
-      {/* FIXED: Chat Modal */}
+      {/* NEW: My Chats Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={myChatsModalVisible}
+        onRequestClose={() => setMyChatsModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>My Active Chats</Text>
+            <ScrollView style={{ width: '100%' }}>
+              {fetchingChats ? (
+                <ActivityIndicator size="large" color="#007BFF" style={{ marginTop: 20 }} />
+              ) : myActiveChats.length === 0 ? (
+                <Text style={styles.noChatsText}>You have no active chats yet.</Text>
+              ) : (
+                myActiveChats.map((chat) => (
+                  <TouchableOpacity
+                    key={chat.chatId}
+                    style={styles.chatListItem}
+                    onPress={() => handleOpenChat(chat)}
+                  >
+                    <Text style={styles.chatItemTitle}>{chat.itemTitle}</Text>
+                    <Text style={styles.chatItemSubTitle}>
+                      Chat with: {chat.otherParticipantEmail}
+                    </Text>
+                    <Text style={styles.chatItemTime}>
+                      Last message: {chat.lastMessageAt.toDate().toLocaleDateString()}
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              )}
+            </ScrollView>
+            <TouchableOpacity
+              style={[styles.button, styles.cancelButton, { marginTop: 20 }]}
+              onPress={() => setMyChatsModalVisible(false)}
+            >
+              <Text style={styles.buttonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Chat Modal */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -621,7 +828,7 @@ const MapScreen = () => {
                 <View style={styles.chatHeader}>
                   <Text style={styles.chatTitle}>Chat about: {currentChat.itemTitle}</Text>
                   <Text style={styles.chatSubTitle}>
-                    with {currentChat.posterEmail || 'Anonymous'}
+                    with {currentChat.otherParticipantEmail || 'Anonymous'}
                   </Text>
                 </View>
 
@@ -954,6 +1161,93 @@ const styles = StyleSheet.create({
   chatCloseButton: {
     marginTop: 15,
     backgroundColor: '#6c757d', // A neutral close button color
+  },
+  // --- NEW Styles for My Chats Modal ---
+  myChatsButton: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    backgroundColor: '#007BFF',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+  },
+  myChatsButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  chatListItem: {
+    width: '100%',
+    padding: 15,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  chatItemTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  chatItemSubTitle: {
+    fontSize: 14,
+    color: '#555',
+    marginTop: 5,
+  },
+  chatItemTime: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 5,
+  },
+  noChatsText: {
+    textAlign: 'center',
+    color: '#999',
+    marginTop: 20,
+    fontSize: 16,
+  },
+  // --- NEW Styles for Search Bar ---
+  searchContainer: {
+    position: 'absolute',
+    top: 50,
+    width: '90%',
+    flexDirection: 'row',
+    backgroundColor: 'white',
+    borderRadius: 10,
+    padding: 10,
+    alignSelf: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+    zIndex: 1, // Ensure it's on top of the map
+  },
+  searchInput: {
+    flex: 1,
+    height: 40,
+    borderColor: '#ddd',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 15,
+    marginRight: 10,
+  },
+  searchButton: {
+    backgroundColor: '#007AFF',
+    borderRadius: 8,
+    padding: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  searchButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
   },
 });
 
