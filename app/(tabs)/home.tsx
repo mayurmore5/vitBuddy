@@ -875,7 +875,7 @@ longitude: 72.8777,
                   <TouchableOpacity 
                     style={[
                       styles.sendButton,
-                      (!newMessageText.trim() || sendingMessage) && styles.disabledSendButton
+                      (!newMessageText.trim() || sendingMessage) && styles.disabledButton
                     ]} 
                     onPress={handleSendMessage}
                     disabled={!newMessageText.trim() || sendingMessage}
