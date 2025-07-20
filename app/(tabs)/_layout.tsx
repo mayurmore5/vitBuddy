@@ -1,22 +1,28 @@
-// app/(tabs)/_layout.tsx
 import { Tabs } from 'expo-router';
-import { FontAwesome } from '@expo/vector-icons'; // Example icon library
+import { FontAwesome } from '@expo/vector-icons';
 
 export default function TabLayout() {
   return (
     <Tabs screenOptions={{ headerShown: true }}>
       <Tabs.Screen
-        name="home" // Corresponds to app/(tabs)/home.tsx
+        name="home" // Correctly points to app/(tabs)/home.tsx
         options={{
           title: 'Home',
           tabBarIcon: ({ color }) => <FontAwesome size={28} name="home" color={color} />,
         }}
       />
       <Tabs.Screen
-        name="test" // Corresponds to app/(tabs)/home.tsx
+        name="chat" // This should correspond to app/(tabs)/chat.tsx
         options={{
-          title: 'Test',
+          title: 'Chat',
           tabBarIcon: ({ color }) => <FontAwesome size={28} name="search" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="chat1" // This should correspond to app/(tabs)/chat1.tsx
+        options={{
+          title: 'Chat',
+          tabBarIcon: ({ color }) => <FontAwesome size={28} name="save" color={color} />,
         }}
       />
       {/* Add more tabs here, e.g., for profile, settings */}
