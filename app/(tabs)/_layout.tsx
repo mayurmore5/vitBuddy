@@ -15,18 +15,12 @@ export default function TabLayout() {
         name="chat" // This should correspond to app/(tabs)/chat.tsx
         options={{
           title: 'Chat',
-          tabBarIcon: ({ color }) => <FontAwesome size={28} name="search" color={color} />,
+          tabBarIcon: ({ color }) => <FontAwesome size={28} name="comments" color={color} />,
         }}
       />
-      <Tabs.Screen
-        name="chat1" // This should correspond to app/(tabs)/chat1.tsx
-        options={{
-          title: 'Chat',
-          tabBarIcon: ({ color }) => <FontAwesome size={28} name="save" color={color} />,
-        }}
-      />
+      
       {/* Add more tabs here, e.g., for profile, settings */}
-      {/*
+      
       <Tabs.Screen
         name="profile"
         options={{
@@ -34,7 +28,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <FontAwesome size={28} name="user" color={color} />,
         }}
       />
-      */}
+      
     </Tabs>
   );
 }

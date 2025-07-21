@@ -45,7 +45,7 @@ interface ChatDetails {
   posterEmail: string | null;
   otherParticipantUid: string;
   otherParticipantEmail: string | null;
-  otherParticipantUsername: string | null; // NEW: Username field
+  otherParticipantUsername: string | null;
 }
 
 interface ActiveChat {
@@ -53,7 +53,7 @@ interface ActiveChat {
   itemId: string;
   itemTitle: string;
   otherParticipantEmail: string;
-  otherParticipantUsername: string | null; // NEW: Username field
+  otherParticipantUsername: string | null;
   lastMessageAt: Timestamp;
 }
 
@@ -100,9 +100,9 @@ const ChatScreen = () => {
       orderBy('lastMessageAt', 'desc')
     );
 
-    const unsubscribe = onSnapshot(q, async (snapshot) => {
-      const fetchedChats: ActiveChat[] = [];
-      const promises = snapshot.docs.map(async (doc) => {
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      // Optimized: Denormalized usernames are read directly from the chat document
+      const fetchedChats: ActiveChat[] = snapshot.docs.map((doc) => {
         const data = doc.data();
         const otherParticipantUid = data.participant1Uid === user.uid 
           ? data.participant2Uid
@@ -111,19 +111,21 @@ const ChatScreen = () => {
         const otherParticipantEmail = data.participant1Uid === user.uid 
           ? data.participant2Email 
           : data.participant1Email;
-
-        const otherParticipantUsername = await getUserDisplayName(otherParticipantUid);
         
-        fetchedChats.push({
+        // Read the denormalized username
+        const otherParticipantUsername = data.participant1Uid === user.uid 
+          ? data.participant2Username
+          : data.participant1Username;
+
+        return {
           chatId: doc.id,
           itemId: data.itemId,
           itemTitle: data.itemTitle,
           otherParticipantEmail: otherParticipantEmail,
-          otherParticipantUsername: otherParticipantUsername, // NEW: Storing username
+          otherParticipantUsername: otherParticipantUsername,
           lastMessageAt: data.lastMessageAt,
-        });
+        };
       });
-      await Promise.all(promises);
       setMyActiveChats(fetchedChats);
       setFetchingChats(false);
     }, (error) => {
@@ -176,8 +178,8 @@ const ChatScreen = () => {
     setCurrentChat({
       itemId: chat.itemId,
       itemTitle: chat.itemTitle,
-      posterUid: '',
-      posterEmail: '',
+      posterUid: '', // Not used, can be left blank
+      posterEmail: '', // Not used, can be left blank
       otherParticipantUid: otherUid,
       otherParticipantEmail: chat.otherParticipantEmail,
       otherParticipantUsername: chat.otherParticipantUsername,
@@ -202,6 +204,8 @@ const ChatScreen = () => {
       const chatDocSnapshot = await getDoc(chatDocRef);
 
       if (!chatDocSnapshot.exists()) {
+        const myUsername = await getUserDisplayName(user.uid);
+
         await setDoc(chatDocRef, {
           itemId: currentChat.itemId,
           itemTitle: currentChat.itemTitle,
@@ -209,6 +213,8 @@ const ChatScreen = () => {
           participant2Uid: participants[1],
           participant1Email: participants[0] === user.uid ? user.email : currentChat.otherParticipantEmail,
           participant2Email: participants[1] === user.uid ? user.email : currentChat.otherParticipantEmail,
+          participant1Username: participants[0] === user.uid ? myUsername : currentChat.otherParticipantUsername,
+          participant2Username: participants[1] === user.uid ? myUsername : currentChat.otherParticipantUsername,
           createdAt: Timestamp.now(),
         });
       }
