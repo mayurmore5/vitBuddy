@@ -19,7 +19,6 @@ import MapView, { Marker, LatLng, MapPressEvent } from 'react-native-maps';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { useNavigation } from '@react-navigation/native';
-import { Client, Storage, ID } from 'appwrite';
 import {
   collection,
   addDoc,
@@ -36,6 +35,8 @@ import {
 } from 'firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../firbase.config';
+import { getStorage, ref, uploadString, getDownloadURL } from 'firebase/storage';
+import * as FileSystem from 'expo-file-system';
 
 // Define interfaces (assuming these are in a separate file or at the top)
 interface LostFoundItem {
@@ -86,16 +87,6 @@ const { width, height } = Dimensions.get('window');
 const ASPECT_RATIO = width / height;
 const LATITUDE_DELTA = 0.0535;
 const LONGITUDE_DELTA = LATITUDE_DELTA * ASPECT_RATIO;
-
-const APPWRITE_ENDPOINT = 'https://fra.cloud.appwrite.io/v1';
-const APPWRITE_PROJECT_ID = '6877ceb900174de77c13';
-const APPWRITE_BUCKET_ID = '6877cef2001785f62b03';
-
-const appwriteClient = new Client()
-  .setEndpoint(APPWRITE_ENDPOINT)
-  .setProject(APPWRITE_PROJECT_ID);
-
-const appwriteStorage = new Storage(appwriteClient);
 
 const GEOAPIFY_API_KEY = 'e2ffdb8a5b2b41d38b49e0c74dd18c12';
 const GEOAPIFY_AUTOCOMPLETE_URL = 'https://api.geoapify.com/v1/geocode/autocomplete';
@@ -314,6 +305,7 @@ const MapScreen = () => {
     });
     if (!result.canceled && result.assets && result.assets.length > 0) {
       const asset = result.assets[0];
+      console.log('Uploading asset:', asset); // Debug log
       setImageAsset({
         uri: asset.uri,
         type: asset.mimeType || 'image/jpeg',
@@ -323,29 +315,22 @@ const MapScreen = () => {
     }
   };
 
-  const uploadImageToAppwrite = async (asset: { uri: string; type: string; fileName: string }, uid: string) => {
+  const storage = getStorage();
+
+  const uploadImageToFirebase = async (asset: { uri: string; type: string; fileName: string }, uid: string) => {
     try {
-      const response = await fetch(asset.uri);
-      const blob = await response.blob();
-      const fileToUpload = Object.defineProperty(blob, 'name', {
-        value: asset.fileName,
-        writable: false,
+      // Read the file as a base64 string
+      const base64 = await FileSystem.readAsStringAsync(asset.uri, {
+        encoding: FileSystem.EncodingType.Base64,
       });
-      Object.defineProperty(fileToUpload, 'lastModified', {
-        value: new Date().getTime(),
-        writable: false,
-      });
-      const file = await appwriteStorage.createFile(
-        APPWRITE_BUCKET_ID,
-        ID.unique(),
-        fileToUpload as File,
-        [`read("user:${uid}")`, `write("user:${uid}")`]
-      );
-      const imageUrl = appwriteStorage.getFilePreview(APPWRITE_BUCKET_ID, file.$id).toString();
-      return { imageUrl, fileId: file.$id };
+      // Upload the base64 string to Firebase Storage
+      const imageRef = ref(storage, `lostFoundImages/${uid}/${Date.now()}_${asset.fileName}`);
+      await uploadString(imageRef, base64, 'base64');
+      const imageUrl = await getDownloadURL(imageRef);
+      return { imageUrl };
     } catch (error: any) {
-      console.error("Error uploading image to Appwrite:", error);
-      Alert.alert("Upload Error", `Failed to upload image: ${error.message}`);
+      console.error('Error uploading image to Firebase Storage:', error);
+      Alert.alert('Upload Error', `Failed to upload image: ${error.message}`);
       return null;
     }
   };
@@ -357,13 +342,11 @@ const MapScreen = () => {
     }
     setUploading(true);
     let imageUrl = null;
-    let fileId = null;
     try {
       if (imageAsset) {
-        const uploadResult = await uploadImageToAppwrite(imageAsset, user.uid);
+        const uploadResult = await uploadImageToFirebase(imageAsset, user.uid);
         if (uploadResult) {
           imageUrl = uploadResult.imageUrl;
-          fileId = uploadResult.fileId;
         } else {
           setUploading(false);
           return;
@@ -375,7 +358,6 @@ const MapScreen = () => {
         latitude: selectedLocation.latitude,
         longitude: selectedLocation.longitude,
         imageUrl: imageUrl,
-        fileId: fileId,
         posterUid: user.uid,
         posterEmail: user.email,
         createdAt: Timestamp.now(),
@@ -406,14 +388,6 @@ const MapScreen = () => {
           onPress: async () => {
             setIsDeleting(true);
             try {
-              if (selectedItem.fileId) {
-                try {
-                  await appwriteStorage.deleteFile(APPWRITE_BUCKET_ID, selectedItem.fileId);
-                  console.log("Image deleted from Appwrite Storage:", selectedItem.fileId);
-                } catch (storageError: any) {
-                  console.warn("Could not delete image from Appwrite Storage:", storageError);
-                }
-              }
               await deleteDoc(doc(db, 'lostFoundItems', selectedItem.id));
               Alert.alert("Deleted", "Item successfully removed.");
               setItemDetailModalVisible(false);

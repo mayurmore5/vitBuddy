@@ -22,6 +22,15 @@ export default function TabLayout() {
       {/* Add more tabs here, e.g., for profile, settings */}
       
       <Tabs.Screen
+        name="marketplace"
+        options={{
+          title: 'Marketplace',
+          headerShown:false,
+          tabBarIcon: ({ color }) => <FontAwesome size={28} name="shopping-cart" color={color} />, // You can use another icon if you prefer
+        }}
+      />
+      
+      <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',

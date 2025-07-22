@@ -265,7 +265,7 @@ const ChatScreen = () => {
             >
               <View style={styles.avatarPlaceholder}>
                 <Text style={styles.avatarText}>
-                  {chat.otherParticipantUsername?.charAt(0).toUpperCase() || chat.otherParticipantEmail.charAt(0).toUpperCase()}
+                  {(chat.otherParticipantUsername?.charAt(0) || chat.otherParticipantEmail?.charAt(0) || 'U').toUpperCase()}
                 </Text>
               </View>
               <View style={styles.chatItemContent}>
