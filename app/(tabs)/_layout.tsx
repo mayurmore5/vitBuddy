@@ -12,6 +12,13 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="map" // This should correspond to app/(tabs)/chat.tsx
+        options={{
+          title: 'Map',
+          tabBarIcon: ({ color }) => <FontAwesome size={28} name="map" color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="chat" // This should correspond to app/(tabs)/chat.tsx
         options={{
           title: 'Chat',
@@ -19,6 +26,14 @@ export default function TabLayout() {
         }}
       />
       
+      <Tabs.Screen
+        name="projects"
+        options={{
+          title: 'Projects',
+          headerShown:false,
+          tabBarIcon: ({ color }) => <FontAwesome size={28} name="book" color={color} />, // You can use another icon if you prefer
+        }}
+      />
       {/* Add more tabs here, e.g., for profile, settings */}
       
       <Tabs.Screen
