@@ -7,7 +7,8 @@ import {
   ScrollView, 
   Dimensions, 
   Animated,
-  ImageBackground
+  ImageBackground,
+  FlatList
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -98,134 +99,171 @@ export default function HomeScreen() {
   ];
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Hero Section */}
-      <LinearGradient colors={['#667eea', '#764ba2']} style={styles.heroGradient}>
-        <Animated.View 
-          style={[
-            styles.heroContent,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }]
-            }
-          ]}
-        >
-          <View style={styles.heroIconContainer}>
-            <LinearGradient colors={['#FF6B6B', '#4ECDC4']} style={styles.heroIcon}>
-              <Text style={styles.heroIconText}>🎓</Text>
+    <FlatList
+      data={features}
+      keyExtractor={item => item.id}
+      contentContainerStyle={styles.container}
+      ListHeaderComponent={
+        <>
+          <LinearGradient colors={['#667eea', '#764ba2']} style={styles.heroGradient}>
+            <Animated.View 
+              style={[
+                styles.heroContent,
+                {
+                  opacity: fadeAnim,
+                  transform: [{ translateY: slideAnim }]
+                }
+              ]}
+            >
+              <View style={styles.heroIconContainer}>
+                <LinearGradient colors={['#FF6B6B', '#4ECDC4']} style={styles.heroIcon}>
+                  <Text style={styles.heroIconText}>🎓</Text>
+                </LinearGradient>
+              </View>
+              
+              <Text style={styles.heroTitle}>Campus Lost & Found</Text>
+              <Text style={styles.heroSubtitle}>
+                Your ultimate campus companion for finding lost items, trading with classmates, and sharing knowledge
+              </Text>
+              
+              <TouchableOpacity style={styles.ctaButton}>
+                <LinearGradient colors={['#FF6B6B', '#4ECDC4']} style={styles.ctaGradient}>
+                  <Text style={styles.ctaText}>Get Started Free</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </Animated.View>
+          </LinearGradient>
+
+          {/* Stats Section */}
+          <View style={styles.statsContainer}>
+            <View style={styles.statsGrid}>
+              {stats.map((stat, index) => (
+                <View key={index} style={styles.statCard}>
+                  <Text style={styles.statIcon}>{stat.icon}</Text>
+                  <Text style={styles.statValue}>{stat.value}</Text>
+                  <Text style={styles.statLabel}>{stat.label}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {/* Features Section */}
+          <View style={styles.featuresSection}>
+            <Text style={styles.sectionTitle}>Everything You Need</Text>
+            <Text style={styles.sectionSubtitle}>
+              Comprehensive tools designed specifically for campus life
+            </Text>
+            
+            <View style={styles.featuresGrid}>
+              {features.map((feature, index) => (
+                <TouchableOpacity 
+                  key={feature.id}
+                  style={styles.featureCard}
+                  onPress={() => router.push(feature.route as any)}
+                  activeOpacity={0.8}
+                >
+                  <LinearGradient
+                    colors={feature.gradient}
+                    style={styles.featureGradient}
+                    start={{x: 0, y: 0}}
+                    end={{x: 1, y: 1}}
+                  >
+                    <View style={styles.featureIconContainer}>
+                      <LinearGradient colors={feature.gradient} style={styles.featureIcon}>
+                        <Text style={styles.featureIconText}>{feature.icon}</Text>
+                      </LinearGradient>
+                    </View>
+                    
+                    <Text style={styles.featureTitle}>{feature.title}</Text>
+                    <Text style={styles.featureDescription}>{feature.description}</Text>
+                    
+                    <View style={styles.featureFooter}>
+                      <View style={styles.statsTag}>
+                        <Text style={styles.statsTagText}>{feature.stats}</Text>
+                      </View>
+                      <Text style={styles.exploreText}>Explore →</Text>
+                    </View>
+                  </LinearGradient>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* Capabilities Section */}
+          <View style={styles.capabilitiesSection}>
+            <LinearGradient 
+              colors={['#ffffff', '#f8fafc']} 
+              style={styles.capabilitiesCard}
+            >
+              <Text style={styles.capabilitiesTitle}>What Makes Us Special?</Text>
+              
+              <View style={styles.capabilitiesList}>
+                {capabilities.map((capability, index) => (
+                  <View key={index} style={styles.capabilityItem}>
+                    <View style={styles.capabilityBullet}>
+                      <LinearGradient colors={['#10B981', '#34D399']} style={styles.bulletGradient}>
+                        <View style={styles.bulletDot} />
+                      </LinearGradient>
+                    </View>
+                    <Text style={styles.capabilityText}>{capability}</Text>
+                  </View>
+                ))}
+              </View>
+              
+              <TouchableOpacity style={styles.profileButton} onPress={() => router.push('/(tabs)/profile')}>
+                <LinearGradient colors={['#6366F1', '#8B5CF6']} style={styles.profileGradient}>
+                  <Text style={styles.profileButtonText}>👤 Manage Profile</Text>
+                </LinearGradient>
+              </TouchableOpacity>
             </LinearGradient>
           </View>
-          
-          <Text style={styles.heroTitle}>Campus Lost & Found</Text>
-          <Text style={styles.heroSubtitle}>
-            Your ultimate campus companion for finding lost items, trading with classmates, and sharing knowledge
-          </Text>
-          
-          <TouchableOpacity style={styles.ctaButton}>
-            <LinearGradient colors={['#FF6B6B', '#4ECDC4']} style={styles.ctaGradient}>
-              <Text style={styles.ctaText}>Get Started Free</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        </Animated.View>
-      </LinearGradient>
 
-      {/* Stats Section */}
-      <View style={styles.statsContainer}>
-        <View style={styles.statsGrid}>
-          {stats.map((stat, index) => (
-            <View key={index} style={styles.statCard}>
-              <Text style={styles.statIcon}>{stat.icon}</Text>
-              <Text style={styles.statValue}>{stat.value}</Text>
-              <Text style={styles.statLabel}>{stat.label}</Text>
-            </View>
-          ))}
-        </View>
-      </View>
-
-      {/* Features Section */}
-      <View style={styles.featuresSection}>
-        <Text style={styles.sectionTitle}>Everything You Need</Text>
-        <Text style={styles.sectionSubtitle}>
-          Comprehensive tools designed specifically for campus life
-        </Text>
-        
-        <View style={styles.featuresGrid}>
-          {features.map((feature, index) => (
-            <TouchableOpacity 
-              key={feature.id}
-              style={styles.featureCard}
-              onPress={() => router.push(feature.route as any)}
-              activeOpacity={0.8}
-            >
-              <LinearGradient
-                colors={feature.gradient}
-                style={styles.featureGradient}
-                start={{x: 0, y: 0}}
-                end={{x: 1, y: 1}}
-              >
-                <View style={styles.featureIconContainer}>
-                  <LinearGradient colors={feature.gradient} style={styles.featureIcon}>
-                    <Text style={styles.featureIconText}>{feature.icon}</Text>
-                  </LinearGradient>
-                </View>
-                
-                <Text style={styles.featureTitle}>{feature.title}</Text>
-                <Text style={styles.featureDescription}>{feature.description}</Text>
-                
-                <View style={styles.featureFooter}>
-                  <View style={styles.statsTag}>
-                    <Text style={styles.statsTagText}>{feature.stats}</Text>
-                  </View>
-                  <Text style={styles.exploreText}>Explore →</Text>
-                </View>
+          {/* Bottom CTA */}
+          <View style={styles.bottomCTA}>
+            <Text style={styles.bottomCTATitle}>Ready to get started?</Text>
+            <Text style={styles.bottomCTASubtitle}>
+              Join thousands of students already using our platform
+            </Text>
+            <TouchableOpacity style={styles.bottomCTAButton}>
+              <LinearGradient colors={['#667eea', '#764ba2']} style={styles.bottomCTAGradient}>
+                <Text style={styles.bottomCTAText}>Download App</Text>
               </LinearGradient>
             </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      {/* Capabilities Section */}
-      <View style={styles.capabilitiesSection}>
-        <LinearGradient 
-          colors={['#ffffff', '#f8fafc']} 
-          style={styles.capabilitiesCard}
-        >
-          <Text style={styles.capabilitiesTitle}>What Makes Us Special?</Text>
-          
-          <View style={styles.capabilitiesList}>
-            {capabilities.map((capability, index) => (
-              <View key={index} style={styles.capabilityItem}>
-                <View style={styles.capabilityBullet}>
-                  <LinearGradient colors={['#10B981', '#34D399']} style={styles.bulletGradient}>
-                    <View style={styles.bulletDot} />
-                  </LinearGradient>
-                </View>
-                <Text style={styles.capabilityText}>{capability}</Text>
-              </View>
-            ))}
           </View>
-          
-          <TouchableOpacity style={styles.profileButton} onPress={() => router.push('/(tabs)/profile')}>
-            <LinearGradient colors={['#6366F1', '#8B5CF6']} style={styles.profileGradient}>
-              <Text style={styles.profileButtonText}>👤 Manage Profile</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        </LinearGradient>
-      </View>
-
-      {/* Bottom CTA */}
-      <View style={styles.bottomCTA}>
-        <Text style={styles.bottomCTATitle}>Ready to get started?</Text>
-        <Text style={styles.bottomCTASubtitle}>
-          Join thousands of students already using our platform
-        </Text>
-        <TouchableOpacity style={styles.bottomCTAButton}>
-          <LinearGradient colors={['#667eea', '#764ba2']} style={styles.bottomCTAGradient}>
-            <Text style={styles.bottomCTAText}>Download App</Text>
+        </>
+      }
+      renderItem={({ item }) => (
+        <TouchableOpacity 
+          key={item.id}
+          style={styles.featureCard}
+          onPress={() => router.push(item.route as any)}
+          activeOpacity={0.8}
+        >
+          <LinearGradient
+            colors={item.gradient}
+            style={styles.featureGradient}
+            start={{x: 0, y: 0}}
+            end={{x: 1, y: 1}}
+          >
+            <View style={styles.featureIconContainer}>
+              <LinearGradient colors={item.gradient} style={styles.featureIcon}>
+                <Text style={styles.featureIconText}>{item.icon}</Text>
+              </LinearGradient>
+            </View>
+            
+            <Text style={styles.featureTitle}>{item.title}</Text>
+            <Text style={styles.featureDescription}>{item.description}</Text>
+            
+            <View style={styles.featureFooter}>
+              <View style={styles.statsTag}>
+                <Text style={styles.statsTagText}>{item.stats}</Text>
+              </View>
+              <Text style={styles.exploreText}>Explore →</Text>
+            </View>
           </LinearGradient>
         </TouchableOpacity>
-      </View>
-    </ScrollView>
+      )}
+    />
   );
 }
 
