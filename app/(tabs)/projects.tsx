@@ -55,18 +55,6 @@ export default function ProjectsScreen() {
     setModalVisible(true);
   };
 
-  // Remove handlePickPDF
-
-  // Remove image upload logic
-
-  const uploadFileToFirebase = async (uri: string, path: string) => {
-    // Read file as base64 using expo-file-system ONLY
-    const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
-    const fileRef = ref(storage, path);
-    await uploadString(fileRef, base64, 'base64');
-    return await getDownloadURL(fileRef);
-  };
-
   const normalizeUrl = (url: string) => {
     if (!url) return url;
     if (url.startsWith('http://') || url.startsWith('https://')) return url;
@@ -80,13 +68,6 @@ export default function ProjectsScreen() {
       return;
     }
     try {
-      let pdfUrl: string | null = null;
-      // Remove image upload logic
-      if (shareType === 'Notes' && pdfUri) {
-        // pdfUri is now a link, no need to upload
-        pdfUrl = pdfUri.trim();
-      }
-      // Remove image upload logic
       const docRef = await addDoc(collection(db, 'studyResources'), {
         title,
         author: user?.email || 'You',
