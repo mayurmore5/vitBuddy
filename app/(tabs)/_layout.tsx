@@ -8,13 +8,14 @@ export default function TabLayout() {
         name="home" // Correctly points to app/(tabs)/home.tsx
         options={{
           title: 'Home',
+          headerShown:false,
           tabBarIcon: ({ color }) => <FontAwesome size={28} name="home" color={color} />,
         }}
       />
       <Tabs.Screen
         name="map" // This should correspond to app/(tabs)/chat.tsx
         options={{
-          title: 'Map',
+          title: 'Find your thing',
           tabBarIcon: ({ color }) => <FontAwesome size={28} name="map" color={color} />,
         }}
       />

@@ -8,24 +8,41 @@ import {
   Image,
   ScrollView,
   Alert,
+  Switch,
+  Modal,
+  FlatList,
+  Linking,
 } from 'react-native';
-import { useAuth } from '../../contexts/AuthContext'; // Assuming AuthContext provides user info and logout
-import { doc, getDoc } from 'firebase/firestore';
+import { useAuth } from '../../contexts/AuthContext';
+import { doc, getDoc, collection, query, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { db } from '../../firbase.config';
-import { getAuth, signOut } from 'firebase/auth'; // Import signOut from firebase/auth
+import { getAuth, signOut } from 'firebase/auth';
+import { LinearGradient } from 'expo-linear-gradient';
 
-// Define a simple interface for user data if you fetch it from Firestore
 interface UserProfile {
   username: string;
   email: string;
-  profilePictureUrl?: string; // Optional profile picture URL
-  // Add any other profile fields you might have
+  profilePictureUrl?: string;
+}
+
+interface SharedResource {
+  id: string;
+  title: string;
+  type: 'Notes' | 'Project';
+  description: string;
+  pdfUri?: string;
+  github?: string;
+  createdAt: any;
 }
 
 const ProfileScreen = () => {
-  const { user, loading: authLoading } = useAuth(); // Get user and loading state from AuthContext
+  const { user, loading: authLoading } = useAuth();
   const [profileData, setProfileData] = useState<UserProfile | null>(null);
   const [fetchingProfile, setFetchingProfile] = useState(true);
+  const [darkMode, setDarkMode] = useState(false);
+  const [resourcesModalVisible, setResourcesModalVisible] = useState(false);
+  const [sharedResources, setSharedResources] = useState<SharedResource[]>([]);
+  const [loadingResources, setLoadingResources] = useState(false);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -36,58 +53,102 @@ const ProfileScreen = () => {
       try {
         const userDocRef = doc(db, 'users', user.uid);
         const userDocSnap = await getDoc(userDocRef);
-
         if (userDocSnap.exists()) {
           const data = userDocSnap.data();
           setProfileData({
-            username: data.username || user.email?.split('@')[0] || 'User', // Fallback to email prefix
+            username: data.username || user.email?.split('@')[0] || 'User',
             email: user.email || 'N/A',
             profilePictureUrl: data.profilePictureUrl || null,
           });
         } else {
-          // If no profile document, use default user info
           setProfileData({
             username: user.email?.split('@')[0] || 'User',
             email: user.email || 'N/A',
           });
         }
       } catch (error) {
-        console.error("Error fetching user profile:", error);
-        Alert.alert("Error", "Failed to load profile data.");
         setProfileData({
           username: user.email?.split('@')[0] || 'User',
           email: user.email || 'N/A',
-          
         });
       } finally {
         setFetchingProfile(false);
       }
     };
-
     fetchUserProfile();
   }, [user, db]);
 
-  const handleLogout = async () => {
+  const fetchSharedResources = async () => {
+    if (!user || !db) return;
+    
+    setLoadingResources(true);
+    try {
+      const resourcesRef = collection(db, 'studyResources');
+      const q = query(resourcesRef, where('authorUid', '==', user.uid));
+      const querySnapshot = await getDocs(q);
+      
+      const resources: SharedResource[] = [];
+      querySnapshot.forEach((doc) => {
+        resources.push({ id: doc.id, ...doc.data() } as SharedResource);
+      });
+      
+      setSharedResources(resources);
+    } catch (error) {
+      console.error('Error fetching shared resources:', error);
+      Alert.alert('Error', 'Failed to load your shared resources.');
+    } finally {
+      setLoadingResources(false);
+    }
+  };
+
+  const handleDeleteResource = async (resourceId: string) => {
     Alert.alert(
-      "Logout",
-      "Are you sure you want to log out?",
+      'Delete Resource',
+      'Are you sure you want to delete this resource?',
       [
-        { text: "Cancel", style: "cancel" },
+        { text: 'Cancel', style: 'cancel' },
         {
-          text: "Logout",
+          text: 'Delete',
+          style: 'destructive',
           onPress: async () => {
             try {
-              const auth = getAuth(); // Get the auth instance
-              await signOut(auth); // Sign out the user
-              Alert.alert("Success", "You have been logged out.");
-              // Optionally navigate to a login/welcome screen after logout
-              // navigation.navigate('Login'); // If you have a login screen
+              await deleteDoc(doc(db, 'studyResources', resourceId));
+              setSharedResources(sharedResources.filter(r => r.id !== resourceId));
+              Alert.alert('Success', 'Resource deleted successfully.');
+            } catch (error) {
+              Alert.alert('Error', 'Failed to delete resource.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const normalizeUrl = (url: string) => {
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      return `https://${url}`;
+    }
+    return url;
+  };
+
+  const handleLogout = async () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to log out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          onPress: async () => {
+            try {
+              const auth = getAuth();
+              await signOut(auth);
+              Alert.alert('Success', 'You have been logged out.');
             } catch (error: any) {
-              console.error("Error logging out:", error);
-              Alert.alert("Logout Error", `Failed to log out: ${error.message}`);
+              Alert.alert('Logout Error', `Failed to log out: ${error.message}`);
             }
           },
-          style: "destructive",
+          style: 'destructive',
         },
       ],
       { cancelable: true }
@@ -107,14 +168,13 @@ const ProfileScreen = () => {
     return (
       <View style={styles.container}>
         <Text style={styles.noUserText}>Please log in to view your profile.</Text>
-        {/* Optionally add a button to navigate to login */}
       </View>
     );
   }
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.profileHeader}>
+      <LinearGradient colors={["#667eea", "#764ba2"]} style={styles.profileHeader}>
         {profileData?.profilePictureUrl ? (
           <Image source={{ uri: profileData.profilePictureUrl }} style={styles.profileImage} />
         ) : (
@@ -126,31 +186,128 @@ const ProfileScreen = () => {
         )}
         <Text style={styles.usernameText}>{profileData?.username || 'Guest User'}</Text>
         <Text style={styles.emailText}>{profileData?.email || user.email}</Text>
+      </LinearGradient>
+
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Account</Text>
+        <TouchableOpacity style={styles.optionRow}>
+          <Text style={styles.optionIcon}>✏️</Text>
+          <Text style={styles.optionText}>Edit Profile</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.optionRow}>
+          <Text style={styles.optionIcon}>🔒</Text>
+          <Text style={styles.optionText}>Change Password</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.optionRow}
+          onPress={() => {
+            setResourcesModalVisible(true);
+            fetchSharedResources();
+          }}
+        >
+          <Text style={styles.optionIcon}>📄</Text>
+          <Text style={styles.optionText}>My Shared Resources</Text>
+          <Text style={styles.optionCount}>{sharedResources.length}</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Account Information</Text>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Email:</Text>
-          <Text style={styles.infoValue}>{profileData?.email || user.email}</Text>
+        <Text style={styles.cardTitle}>Preferences</Text>
+        <View style={styles.optionRow}>
+          <Text style={styles.optionIcon}>🌙</Text>
+          <Text style={styles.optionText}>Dark Mode</Text>
+          <View style={{ flex: 1 }} />
+          <Switch
+            value={darkMode}
+            onValueChange={setDarkMode}
+            thumbColor={darkMode ? '#764ba2' : '#eee'}
+            trackColor={{ false: '#ccc', true: '#667eea' }}
+          />
         </View>
-        {/* Add more account info fields here */}
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Settings</Text>
-        <TouchableOpacity style={styles.settingItem}>
-          <Text style={styles.settingText}>Edit Profile</Text>
+        <TouchableOpacity style={styles.optionRow}>
+          <Text style={styles.optionIcon}>❓</Text>
+          <Text style={styles.optionText}>Help & Support</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.settingItem}>
-          <Text style={styles.settingText}>Privacy Settings</Text>
+        <TouchableOpacity style={styles.optionRow}>
+          <Text style={styles.optionIcon}>⚙️</Text>
+          <Text style={styles.optionText}>App Settings</Text>
         </TouchableOpacity>
-        {/* Add more settings items */}
       </View>
 
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Text style={styles.logoutButtonText}>Logout</Text>
       </TouchableOpacity>
+
+      {/* Shared Resources Modal */}
+      <Modal
+        visible={resourcesModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>My Shared Resources</Text>
+            <TouchableOpacity 
+              onPress={() => setResourcesModalVisible(false)}
+              style={styles.closeButton}
+            >
+              <Text style={styles.closeButtonText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+
+          {loadingResources ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#667eea" />
+              <Text style={styles.loadingText}>Loading your resources...</Text>
+            </View>
+          ) : sharedResources.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyIcon}>📚</Text>
+              <Text style={styles.emptyTitle}>No Resources Shared Yet</Text>
+              <Text style={styles.emptyText}>Start sharing your notes and projects to see them here!</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={sharedResources}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.resourcesList}
+              renderItem={({ item }) => (
+                <View style={styles.resourceCard}>
+                  <View style={styles.resourceHeader}>
+                    <Text style={styles.resourceType}>{item.type}</Text>
+                    <TouchableOpacity
+                      onPress={() => handleDeleteResource(item.id)}
+                      style={styles.deleteButton}
+                    >
+                      <Text style={styles.deleteButtonText}>🗑️</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={styles.resourceTitle}>{item.title}</Text>
+                  <Text style={styles.resourceDescription}>{item.description}</Text>
+                  
+                  {item.pdfUri && (
+                    <TouchableOpacity 
+                      onPress={() => Linking.openURL(normalizeUrl(item.pdfUri!))}
+                      style={styles.linkButton}
+                    >
+                      <Text style={styles.linkText}>📄 View PDF</Text>
+                    </TouchableOpacity>
+                  )}
+                  
+                  {item.github && (
+                    <TouchableOpacity 
+                      onPress={() => Linking.openURL(normalizeUrl(item.github!))}
+                      style={styles.linkButton}
+                    >
+                      <Text style={styles.linkText}>🔗 View on GitHub</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
+            />
+          )}
+        </View>
+      </Modal>
     </ScrollView>
   );
 };
@@ -180,10 +337,10 @@ const styles = StyleSheet.create({
     marginTop: 50,
   },
   profileHeader: {
-    width: '90%',
+    width: '100%',
     backgroundColor: 'white',
-    borderRadius: 15,
-    padding: 20,
+    borderRadius: 0,
+    padding: 30,
     alignItems: 'center',
     marginBottom: 20,
     shadowColor: '#000',
@@ -197,7 +354,7 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     borderWidth: 3,
-    borderColor: '#007BFF',
+    borderColor: '#fff',
     marginBottom: 15,
     resizeMode: 'cover',
   },
@@ -205,12 +362,12 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#007BFF',
+    backgroundColor: '#764ba2',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 15,
     borderWidth: 3,
-    borderColor: '#007BFF',
+    borderColor: '#fff',
   },
   avatarText: {
     color: 'white',
@@ -220,17 +377,21 @@ const styles = StyleSheet.create({
   usernameText: {
     fontSize: 26,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#fff',
     marginBottom: 5,
+    textShadowColor: 'rgba(0,0,0,0.2)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
   emailText: {
     fontSize: 16,
-    color: '#777',
+    color: '#e0e0e0',
+    marginBottom: 10,
   },
   card: {
-    width: '90%',
+    width: '92%',
     backgroundColor: 'white',
-    borderRadius: 15,
+    borderRadius: 18,
     padding: 20,
     marginBottom: 20,
     shadowColor: '#000',
@@ -242,38 +403,40 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#764ba2',
     marginBottom: 15,
     borderBottomWidth: 1,
     borderBottomColor: '#EEE',
     paddingBottom: 10,
   },
-  infoRow: {
+  optionRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-    paddingVertical: 5,
-  },
-  infoLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#555',
-  },
-  infoValue: {
-    fontSize: 16,
-    color: '#333',
-  },
-  settingItem: {
+    alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#EEE',
   },
-  settingText: {
+  optionIcon: {
+    fontSize: 20,
+    marginRight: 16,
+  },
+  optionText: {
     fontSize: 16,
     color: '#333',
+    fontWeight: '500',
+    flex: 1,
+  },
+  optionCount: {
+    fontSize: 14,
+    color: '#667eea',
+    fontWeight: 'bold',
+    backgroundColor: '#f0f4ff',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
   },
   logoutButton: {
-    width: '90%',
+    width: '92%',
     backgroundColor: '#DC3545',
     padding: 15,
     borderRadius: 15,
@@ -289,6 +452,112 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#F0F2F5',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    paddingTop: 60,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEE',
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  closeButton: {
+    padding: 8,
+  },
+  closeButtonText: {
+    fontSize: 24,
+    color: '#666',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  emptyIcon: {
+    fontSize: 60,
+    marginBottom: 20,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 10,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  resourcesList: {
+    padding: 20,
+  },
+  resourceCard: {
+    backgroundColor: 'white',
+    borderRadius: 15,
+    padding: 20,
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  resourceHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  resourceType: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#667eea',
+    backgroundColor: '#f0f4ff',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  deleteButton: {
+    padding: 5,
+  },
+  deleteButtonText: {
+    fontSize: 18,
+  },
+  resourceTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
+  },
+  resourceDescription: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 12,
+    lineHeight: 20,
+  },
+  linkButton: {
+    backgroundColor: '#f8f9fa',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  linkText: {
+    fontSize: 14,
+    color: '#667eea',
+    fontWeight: '500',
   },
 });
 
