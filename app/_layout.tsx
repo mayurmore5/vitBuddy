@@ -1,7 +1,6 @@
 import { View, Text } from 'react-native';
-import { SplashScreen, Stack, useRouter } from "expo-router";
-import { useEffect } from 'react';
-
+import { SplashScreen, Stack, useRouter, usePathname } from "expo-router";
+import { useEffect, useState } from 'react';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 
 
@@ -20,30 +19,41 @@ const RootLayout = () => {
 const RootLayoutNav = () => {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    if (loading) {
-      return;
+    // Only proceed when auth state is determined
+    if (!loading) {
+      SplashScreen.hideAsync();
+      setIsReady(true);
     }
-    SplashScreen.hideAsync();
+  }, [loading]);
 
+  useEffect(() => {
+    if (!isReady) return;
+
+    // Only navigate if we're not already on the desired screen
     if (user) {
-      router.replace('/home');
-    } else {
+      if (!pathname?.startsWith('/(tabs)')) {
+        router.replace('/(tabs)/home');
+      }
+    } else if (pathname !== '/') {
       router.replace('/');
     }
-  }, [user, loading]); 
+  }, [user, isReady, router]);
+
+  // Show nothing while loading
+  if (loading || !isReady) {
+    return null;
+  }
+
   return (
-    
     <Stack>
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      
-      
-      
     </Stack>
-  
   );
 };
 

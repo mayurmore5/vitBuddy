@@ -2,7 +2,7 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "target": "esnext",
-    "module": "commonjs", // <--- THIS IS THE KEY FIX FOR THE PREVIOUS ERROR
+    "module": "esnext", // Updated to work with 'bundler' module resolution
     "strict": true,
     "jsx": "react-native",
     "lib": [
@@ -14,7 +14,7 @@
         "./*"
       ]
     },
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "esModuleInterop": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
