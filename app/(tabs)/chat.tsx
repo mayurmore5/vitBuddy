@@ -27,6 +27,7 @@ import {
 } from 'firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../firbase.config';
+import CustomNavBar from '../../components/CustomNavBar';
 
 // Define interfaces
 interface ChatMessage {
@@ -70,7 +71,7 @@ const getUserDisplayName = async (uid: string) => {
   } catch (error) {
     console.error("Error fetching user display name:", error);
     return null;
-  }
+  } 
 };
 
 const ChatScreen = () => {
@@ -251,6 +252,7 @@ const ChatScreen = () => {
 
   return (
     <View style={styles.container}>
+      <CustomNavBar title="Chat" />
       {fetchingChats ? (
         <ActivityIndicator size="large" color="#007BFF" style={styles.activityIndicator} />
       ) : myActiveChats.length === 0 ? (

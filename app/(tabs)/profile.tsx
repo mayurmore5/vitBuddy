@@ -18,6 +18,7 @@ import { doc, getDoc, collection, query, where, getDocs, deleteDoc } from 'fireb
 import { db } from '../../firbase.config';
 import { getAuth, signOut } from 'firebase/auth';
 import { LinearGradient } from 'expo-linear-gradient';
+import CustomNavBar from '../../components/CustomNavBar';
 
 interface UserProfile {
   username: string;
@@ -173,151 +174,157 @@ const ProfileScreen = () => {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <LinearGradient colors={["#667eea", "#764ba2"]} style={styles.profileHeader}>
-        {profileData?.profilePictureUrl ? (
-          <Image source={{ uri: profileData.profilePictureUrl }} style={styles.profileImage} />
-        ) : (
-          <View style={styles.avatarPlaceholder}>
-            <Text style={styles.avatarText}>
-              {profileData?.username?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase()}
-            </Text>
-          </View>
-        )}
-        <Text style={styles.usernameText}>{profileData?.username || 'Guest User'}</Text>
-        <Text style={styles.emailText}>{profileData?.email || user.email}</Text>
-      </LinearGradient>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Account</Text>
-        <TouchableOpacity style={styles.optionRow}>
-          <Text style={styles.optionIcon}>✏️</Text>
-          <Text style={styles.optionText}>Edit Profile</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.optionRow}>
-          <Text style={styles.optionIcon}>🔒</Text>
-          <Text style={styles.optionText}>Change Password</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.optionRow}
-          onPress={() => {
-            setResourcesModalVisible(true);
-            fetchSharedResources();
-          }}
-        >
-          <Text style={styles.optionIcon}>📄</Text>
-          <Text style={styles.optionText}>My Shared Resources</Text>
-          <Text style={styles.optionCount}>{sharedResources.length}</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Preferences</Text>
-        <View style={styles.optionRow}>
-          <Text style={styles.optionIcon}>🌙</Text>
-          <Text style={styles.optionText}>Dark Mode</Text>
-          <View style={{ flex: 1 }} />
-          <Switch
-            value={darkMode}
-            onValueChange={setDarkMode}
-            thumbColor={darkMode ? '#764ba2' : '#eee'}
-            trackColor={{ false: '#ccc', true: '#667eea' }}
-          />
-        </View>
-        <TouchableOpacity style={styles.optionRow}>
-          <Text style={styles.optionIcon}>❓</Text>
-          <Text style={styles.optionText}>Help & Support</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.optionRow}>
-          <Text style={styles.optionIcon}>⚙️</Text>
-          <Text style={styles.optionText}>App Settings</Text>
-        </TouchableOpacity>
-      </View>
-
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Text style={styles.logoutButtonText}>Logout</Text>
-      </TouchableOpacity>
-
-      {/* Shared Resources Modal */}
-      <Modal
-        visible={resourcesModalVisible}
-        animationType="slide"
-        presentationStyle="pageSheet"
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>My Shared Resources</Text>
-            <TouchableOpacity 
-              onPress={() => setResourcesModalVisible(false)}
-              style={styles.closeButton}
-            >
-              <Text style={styles.closeButtonText}>✕</Text>
-            </TouchableOpacity>
-          </View>
-
-          {loadingResources ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#667eea" />
-              <Text style={styles.loadingText}>Loading your resources...</Text>
-            </View>
-          ) : sharedResources.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyIcon}>📚</Text>
-              <Text style={styles.emptyTitle}>No Resources Shared Yet</Text>
-              <Text style={styles.emptyText}>Start sharing your notes and projects to see them here!</Text>
-            </View>
+    <View style={styles.container}>
+      <CustomNavBar title="Profile" />
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <LinearGradient colors={["#667eea", "#764ba2"]} style={styles.profileHeader}>
+          {profileData?.profilePictureUrl ? (
+            <Image source={{ uri: profileData.profilePictureUrl }} style={styles.profileImage} />
           ) : (
-            <FlatList
-              data={sharedResources}
-              keyExtractor={(item) => item.id}
-              contentContainerStyle={styles.resourcesList}
-              renderItem={({ item }) => (
-                <View style={styles.resourceCard}>
-                  <View style={styles.resourceHeader}>
-                    <Text style={styles.resourceType}>{item.type}</Text>
-                    <TouchableOpacity
-                      onPress={() => handleDeleteResource(item.id)}
-                      style={styles.deleteButton}
-                    >
-                      <Text style={styles.deleteButtonText}>🗑️</Text>
-                    </TouchableOpacity>
-                  </View>
-                  <Text style={styles.resourceTitle}>{item.title}</Text>
-                  <Text style={styles.resourceDescription}>{item.description}</Text>
-                  
-                  {item.pdfUri && (
-                    <TouchableOpacity 
-                      onPress={() => Linking.openURL(normalizeUrl(item.pdfUri!))}
-                      style={styles.linkButton}
-                    >
-                      <Text style={styles.linkText}>📄 View PDF</Text>
-                    </TouchableOpacity>
-                  )}
-                  
-                  {item.github && (
-                    <TouchableOpacity 
-                      onPress={() => Linking.openURL(normalizeUrl(item.github!))}
-                      style={styles.linkButton}
-                    >
-                      <Text style={styles.linkText}>🔗 View on GitHub</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              )}
-            />
+            <View style={styles.avatarPlaceholder}>
+              <Text style={styles.avatarText}>
+                {profileData?.username?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase()}
+              </Text>
+            </View>
           )}
+          <Text style={styles.usernameText}>{profileData?.username || 'Guest User'}</Text>
+          <Text style={styles.emailText}>{profileData?.email || user.email}</Text>
+        </LinearGradient>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Account</Text>
+          <TouchableOpacity style={styles.optionRow}>
+            <Text style={styles.optionIcon}>✏️</Text>
+            <Text style={styles.optionText}>Edit Profile</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.optionRow}>
+            <Text style={styles.optionIcon}>🔒</Text>
+            <Text style={styles.optionText}>Change Password</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.optionRow}
+            onPress={() => {
+              setResourcesModalVisible(true);
+              fetchSharedResources();
+            }}
+          >
+            <Text style={styles.optionIcon}>📄</Text>
+            <Text style={styles.optionText}>My Shared Resources</Text>
+            <Text style={styles.optionCount}>{sharedResources.length}</Text>
+          </TouchableOpacity>
         </View>
-      </Modal>
-    </ScrollView>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Preferences</Text>
+          <View style={styles.optionRow}>
+            <Text style={styles.optionIcon}>🌙</Text>
+            <Text style={styles.optionText}>Dark Mode</Text>
+            <View style={{ flex: 1 }} />
+            <Switch
+              value={darkMode}
+              onValueChange={setDarkMode}
+              thumbColor={darkMode ? '#764ba2' : '#eee'}
+              trackColor={{ false: '#ccc', true: '#667eea' }}
+            />
+          </View>
+          <TouchableOpacity style={styles.optionRow}>
+            <Text style={styles.optionIcon}>❓</Text>
+            <Text style={styles.optionText}>Help & Support</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.optionRow}>
+            <Text style={styles.optionIcon}>⚙️</Text>
+            <Text style={styles.optionText}>App Settings</Text>
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Text style={styles.logoutButtonText}>Logout</Text>
+        </TouchableOpacity>
+
+        {/* Shared Resources Modal */}
+        <Modal
+          visible={resourcesModalVisible}
+          animationType="slide"
+          presentationStyle="pageSheet"
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>My Shared Resources</Text>
+              <TouchableOpacity 
+                onPress={() => setResourcesModalVisible(false)}
+                style={styles.closeButton}
+              >
+                <Text style={styles.closeButtonText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            {loadingResources ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#667eea" />
+                <Text style={styles.loadingText}>Loading your resources...</Text>
+              </View>
+            ) : sharedResources.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyIcon}>📚</Text>
+                <Text style={styles.emptyTitle}>No Resources Shared Yet</Text>
+                <Text style={styles.emptyText}>Start sharing your notes and projects to see them here!</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={sharedResources}
+                keyExtractor={(item) => item.id}
+                contentContainerStyle={styles.resourcesList}
+                renderItem={({ item }) => (
+                  <View style={styles.resourceCard}>
+                    <View style={styles.resourceHeader}>
+                      <Text style={styles.resourceType}>{item.type}</Text>
+                      <TouchableOpacity
+                        onPress={() => handleDeleteResource(item.id)}
+                        style={styles.deleteButton}
+                      >
+                        <Text style={styles.deleteButtonText}>🗑️</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <Text style={styles.resourceTitle}>{item.title}</Text>
+                    <Text style={styles.resourceDescription}>{item.description}</Text>
+                    
+                    {item.pdfUri && (
+                      <TouchableOpacity 
+                        onPress={() => Linking.openURL(normalizeUrl(item.pdfUri!))}
+                        style={styles.linkButton}
+                      >
+                        <Text style={styles.linkText}>📄 View PDF</Text>
+                      </TouchableOpacity>
+                    )}
+                    
+                    {item.github && (
+                      <TouchableOpacity 
+                        onPress={() => Linking.openURL(normalizeUrl(item.github!))}
+                        style={styles.linkButton}
+                      >
+                        <Text style={styles.linkText}>🔗 View on GitHub</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
+              />
+            )}
+          </View>
+        </Modal>
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flexGrow: 1,
+    flex: 1,
     backgroundColor: '#F0F2F5',
+  },
+  scrollContainer: {
+    flexGrow: 1,
     alignItems: 'center',
-    paddingVertical: 20,
+    paddingVertical: 0,
   },
   loadingContainer: {
     flex: 1,
@@ -340,7 +347,7 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: 'white',
     borderRadius: 0,
-    padding: 30,
+    padding: 20,
     alignItems: 'center',
     marginBottom: 20,
     shadowColor: '#000',

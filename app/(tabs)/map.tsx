@@ -37,6 +37,7 @@
   import { db } from '../../firbase.config';
   import { getStorage, ref, uploadString, getDownloadURL } from 'firebase/storage';
   import * as FileSystem from 'expo-file-system';
+  import CustomNavBar from '../../components/CustomNavBar';
 
   // Define interfaces (assuming these are in a separate file or at the top)
   interface LostFoundItem {

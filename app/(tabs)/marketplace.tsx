@@ -4,6 +4,8 @@ import { collection, onSnapshot, query, orderBy, addDoc, Timestamp, doc, getDoc,
 import { db } from '../../firbase.config';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../contexts/AuthContext';
+import CustomNavBar from '../../components/CustomNavBar';
+import { LinearGradient } from 'expo-linear-gradient';
 
 interface MarketplaceItem {
   id: string;
@@ -213,14 +215,25 @@ const MarketplaceScreen = () => {
 
   return (
     <View style={styles.container}>
-      {/* Header Section */}
-      <View style={styles.headerSection}>
-        <Text style={styles.title}>Marketplace</Text>
-        <Text style={styles.subtitle}>Discover amazing deals from your community</Text>
-        <TouchableOpacity style={styles.postButton} onPress={() => setModalVisible(true)}>
-          <Text style={styles.postButtonText}>+ Sell Something</Text>
-        </TouchableOpacity>
+      <CustomNavBar title="Marketplace" />
+      {/* Simple Header */}
+      <View style={styles.simpleHeader}>
+        <Text style={styles.simpleTitle}>Discover Amazing Deals</Text>
       </View>
+
+      {/* Floating Action Button */}
+      <TouchableOpacity 
+        style={styles.fab} 
+        onPress={() => {
+          setModalVisible(true);
+        }}
+        activeOpacity={0.8}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+      >
+        <LinearGradient colors={['#FF6B6B', '#FF8E8E']} style={styles.fabGradient}>
+          <Text style={styles.fabText}>+</Text>
+        </LinearGradient>
+      </TouchableOpacity>
 
       {/* Modal for posting new item */}
       <Modal
@@ -489,13 +502,13 @@ const MarketplaceScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FFFFFF',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FFFFFF',
   },
   loadingText: {
     marginTop: 16,
@@ -503,45 +516,11 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     fontWeight: '500',
   },
-  headerSection: {
-    backgroundColor: '#FFFFFF',
-    paddingTop: 40,
-    paddingBottom: 24,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  title: {
-    textAlign:'center',
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#6B7280',
-    marginBottom: 20,
-  },
-  postButton: {
-    backgroundColor: '#6366F1',
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    alignSelf: 'center',
-    shadowColor: '#6366F1',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  postButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+
   listContainer: {
     padding: 16,
+    paddingTop: 8,
+    paddingBottom: 100, // Space for floating button
   },
   itemCard: {
     flexDirection: 'row',
@@ -551,11 +530,11 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.08,
     shadowRadius: 8,
-    elevation: 3,
+    elevation: 4,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: '#F1F5F9',
   },
   itemImage: {
     width: 100,
@@ -568,9 +547,12 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 12,
     marginRight: 16,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#F8FAFC',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderStyle: 'dashed',
   },
   placeholderText: {
     fontSize: 32,
@@ -581,42 +563,46 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   itemTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
-    lineHeight: 24,
-  },
-  itemPrice: {
     fontSize: 20,
     fontWeight: '700',
+    color: '#1E293B',
+    lineHeight: 26,
+    marginBottom: 8,
+  },
+  itemPrice: {
+    fontSize: 24,
+    fontWeight: '800',
     color: '#059669',
-    marginVertical: 4,
+    marginBottom: 8,
   },
   itemDescription: {
-    fontSize: 14,
-    color: '#6B7280',
-    lineHeight: 20,
+    fontSize: 15,
+    color: '#64748B',
+    lineHeight: 22,
   },
   emptyState: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: 40,
+    paddingVertical: 60,
   },
   emptyStateIcon: {
-    fontSize: 64,
-    marginBottom: 16,
+    fontSize: 80,
+    marginBottom: 24,
   },
   emptyStateTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 8,
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#1E293B',
+    marginBottom: 12,
+    textAlign: 'center',
   },
   emptyStateText: {
-    fontSize: 16,
-    color: '#6B7280',
+    fontSize: 18,
+    color: '#64748B',
     textAlign: 'center',
+    lineHeight: 26,
   },
   modalOverlay: {
     flex: 1,
@@ -629,88 +615,100 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 400,
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 24,
+    borderRadius: 24,
+    padding: 28,
     maxHeight: '90%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 15,
   },
   modalTitle: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 28,
+    fontWeight: '800',
     color: '#111827',
-    marginBottom: 8,
+    marginBottom: 12,
     textAlign: 'center',
   },
   modalSubtitle: {
-    fontSize: 16,
+    fontSize: 18,
     color: '#6B7280',
-    marginBottom: 24,
+    marginBottom: 28,
     textAlign: 'center',
+    fontWeight: '500',
   },
   input: {
     width: '100%',
-    height: 52,
+    height: 56,
     backgroundColor: '#F9FAFB',
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: '#E5E7EB',
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    borderRadius: 16,
+    paddingHorizontal: 20,
     fontSize: 16,
     color: '#111827',
-    marginBottom: 16,
+    marginBottom: 20,
+    fontWeight: '500',
   },
   descriptionInput: {
-    height: 100,
+    height: 120,
     textAlignVertical: 'top',
-    paddingTop: 16,
+    paddingTop: 20,
   },
   imagePickerButton: {
-    backgroundColor: '#F3F4F6',
-    borderWidth: 2,
-    borderColor: '#D1D5DB',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 3,
+    borderColor: '#E2E8F0',
     borderStyle: 'dashed',
-    paddingVertical: 20,
-    borderRadius: 12,
-    marginBottom: 16,
+    paddingVertical: 24,
+    borderRadius: 16,
+    marginBottom: 20,
     alignItems: 'center',
   },
   imagePickerButtonText: {
-    color: '#6B7280',
+    color: '#64748B',
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   previewImage: {
     width: '100%',
     height: 200,
-    borderRadius: 12,
-    marginBottom: 16,
+    borderRadius: 16,
+    marginBottom: 20,
   },
   modalButtonContainer: {
-    gap: 12,
-    marginTop: 8,
+    gap: 16,
+    marginTop: 12,
   },
   primaryButton: {
     backgroundColor: '#6366F1',
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: 18,
+    borderRadius: 16,
     alignItems: 'center',
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   primaryButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '700',
   },
   secondaryButton: {
     backgroundColor: 'transparent',
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: 18,
+    borderRadius: 16,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
   },
   secondaryButtonText: {
     color: '#6B7280',
-    fontSize: 16,
-    fontWeight: '500',
+    fontSize: 18,
+    fontWeight: '600',
   },
   disabledButton: {
     backgroundColor: '#D1D5DB',
@@ -943,6 +941,45 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     fontSize: 16,
     fontWeight: '500',
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 20, // Account for tab bar
+    right: 20,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+    zIndex: 1000,
+  },
+  fabGradient: {
+    flex: 1,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fabText: {
+    color: '#FFFFFF',
+    fontSize: 30,
+    fontWeight: 'bold',
+  },
+  simpleHeader: {
+    paddingTop: 20,
+    paddingBottom: 16,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  simpleTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#1E293B',
   },
 });
 

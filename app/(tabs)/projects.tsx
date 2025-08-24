@@ -6,6 +6,7 @@ import { db } from '../../firbase.config';
 import { getStorage, ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { addDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
+import CustomNavBar from '../../components/CustomNavBar';
 
 const { width } = Dimensions.get('window');
 
@@ -98,17 +99,23 @@ export default function ProjectsScreen() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={["#45B7D1", "#72C7E8"]} style={styles.heroSection}>
-        <Text style={styles.heroTitle}>Study Hub</Text>
-        <Text style={styles.heroSubtitle}>
-          Share notes, upload projects, and collaborate with your classmates!
-        </Text>
-        <TouchableOpacity style={styles.shareButton} onPress={handleShare} activeOpacity={0.85}>
-          <LinearGradient colors={["#4ECDC4", "#45B7D1"]} style={styles.shareButtonGradient}>
-            <Text style={styles.shareButtonText}>+ Share Project or Notes</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-      </LinearGradient>
+      <CustomNavBar title="Study Hub" />
+      {/* Simple Header */}
+      
+
+      {/* Floating Action Button */}
+      <TouchableOpacity 
+        style={styles.fab} 
+        onPress={() => {
+          handleShare();
+        }}
+        activeOpacity={0.8}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+      >
+        <LinearGradient colors={['#4ECDC4', '#45B7D1']} style={styles.fabGradient}>
+          <Text style={styles.fabText}>+</Text>
+        </LinearGradient>
+      </TouchableOpacity>
 
       <Text style={styles.sectionTitle}>Shared Resources</Text>
       {loading ? (
@@ -232,69 +239,33 @@ export default function ProjectsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#FFFFFF',
   },
-  heroSection: {
-    paddingTop: 60,
-    paddingBottom: 32,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
-    marginBottom: 18,
-  },
-  heroTitle: {
-    fontSize: 30,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  heroSubtitle: {
-    fontSize: 16,
-    color: '#e0f7fa',
-    textAlign: 'center',
-    marginBottom: 18,
-    lineHeight: 22,
-  },
-  shareButton: {
-    marginTop: 8,
-    borderRadius: 20,
-    overflow: 'hidden',
-  },
-  shareButtonGradient: {
-    paddingHorizontal: 28,
-    paddingVertical: 12,
-    borderRadius: 20,
-  },
-  shareButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 15,
-    letterSpacing: 1,
-  },
+
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1e293b',
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1E293B',
     marginLeft: 20,
-    marginBottom: 10,
-    marginTop: 10,
+    marginBottom: 16,
+    marginTop: 20,
   },
   resourcesList: {
     paddingHorizontal: 12,
-    paddingBottom: 30,
+    paddingBottom: 100, // Space for floating button
   },
   resourceCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 18,
-    marginBottom: 14,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
   },
   resourceTypeTag: {
     alignSelf: 'flex-start',
@@ -436,5 +407,47 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 14,
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 20, // Account for tab bar
+    right: 20,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+    zIndex: 1000,
+  },
+  fabGradient: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fabText: {
+    color: '#fff',
+    fontSize: 30,
+    fontWeight: 'bold',
+  },
+  simpleHeader: {
+    paddingTop: 20,
+    paddingBottom: 16,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  simpleTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#1E293B',
   },
 });

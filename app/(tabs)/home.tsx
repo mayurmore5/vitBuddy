@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import CustomNavBar from '../../components/CustomNavBar';
 
 const { width, height } = Dimensions.get('window');
 
@@ -99,195 +100,205 @@ export default function HomeScreen() {
   ];
 
   return (
-    <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-      <LinearGradient colors={['#667eea', '#764ba2']} style={styles.heroGradient}>
-        <Animated.View 
-          style={[
-            styles.heroContent,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }]
-            }
-          ]}
-        >
-          <View style={styles.heroIconContainer}>
-            <LinearGradient colors={['#FF6B6B', '#4ECDC4']} style={styles.heroIcon}>
-              <Text style={styles.heroIconText}>🎓</Text>
-            </LinearGradient>
-          </View>
-          <Text style={styles.heroTitle}>Campus Lost & Found</Text>
-          <Text style={styles.heroSubtitle}>
-            Your ultimate campus companion for finding lost items, trading with classmates, and sharing knowledge
-          </Text>
-          <TouchableOpacity style={styles.ctaButton}>
-            <LinearGradient colors={['#FF6B6B', '#4ECDC4']} style={styles.ctaGradient}>
-              <Text style={styles.ctaText}>Get Started Free</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        </Animated.View>
-      </LinearGradient>
-      {/* Stats Section */}
-      <View style={styles.statsContainer}>
-        <View style={styles.statsGrid}>
-          {stats.map((stat, index) => (
-            <View key={index} style={styles.statCard}>
-              <Text style={styles.statIcon}>{stat.icon}</Text>
-              <Text style={styles.statValue}>{stat.value}</Text>
-              <Text style={styles.statLabel}>{stat.label}</Text>
+    <View style={styles.container}>
+      <CustomNavBar />
+      <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+        <LinearGradient colors={['#F8FAFC', '#E2E8F0']} style={styles.heroGradient}>
+          <Animated.View 
+            style={[
+              styles.heroContent,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }]
+              }
+            ]}
+          >
+            <View style={styles.heroIconContainer}>
+              <LinearGradient colors={['#6366F1', '#8B5CF6']} style={styles.heroIcon}>
+                <Text style={styles.heroIconText}>🎓</Text>
+              </LinearGradient>
             </View>
-          ))}
-        </View>
-      </View>
-      {/* Features Section */}
-      <View style={styles.featuresSection}>
-        <Text style={styles.sectionTitle}>Everything You Need</Text>
-        <Text style={styles.sectionSubtitle}>
-          Comprehensive tools designed specifically for campus life
-        </Text>
-        <View style={styles.featuresGrid}>
-          {features.map((feature, index) => (
-            <TouchableOpacity
-              key={feature.id}
-              style={styles.featureCard}
-              onPress={() => router.push(feature.route as any)}
-              activeOpacity={0.8}
-            >
-              <LinearGradient
-                colors={feature.gradient}
-                style={styles.featureGradient}
-                start={{x: 0, y: 0}}
-                end={{x: 1, y: 1}}
-              >
-                <View style={styles.featureIconContainer}>
-                  <LinearGradient colors={feature.gradient} style={styles.featureIcon}>
-                    <Text style={styles.featureIconText}>{feature.icon}</Text>
-                  </LinearGradient>
-                </View>
-                <Text style={styles.featureTitle}>{feature.title}</Text>
-                <Text style={styles.featureDescription}>{feature.description}</Text>
-                <View style={styles.featureFooter}>
-                  <View style={styles.statsTag}>
-                    <Text style={styles.statsTagText}>{feature.stats}</Text>
-                  </View>
-                  <Text style={styles.exploreText}>Explore →</Text>
-                </View>
+            <Text style={styles.heroTitle}>Campus Lost & Found</Text>
+            <Text style={styles.heroSubtitle}>
+              Your ultimate campus companion for finding lost items, trading with classmates, and sharing knowledge
+            </Text>
+            <TouchableOpacity style={styles.ctaButton}>
+              <LinearGradient colors={['#6366F1', '#8B5CF6']} style={styles.ctaGradient}>
+                <Text style={styles.ctaText}>Get Started Free</Text>
               </LinearGradient>
             </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-      {/* Capabilities Section */}
-      <View style={styles.capabilitiesSection}>
-        <LinearGradient 
-          colors={['#ffffff', '#f8fafc']} 
-          style={styles.capabilitiesCard}
-        >
-          <Text style={styles.capabilitiesTitle}>What Makes Us Special?</Text>
-          <View style={styles.capabilitiesList}>
-            {capabilities.map((capability, index) => (
-              <View key={index} style={styles.capabilityItem}>
-                <View style={styles.capabilityBullet}>
-                  <LinearGradient colors={['#10B981', '#34D399']} style={styles.bulletGradient}>
-                    <View style={styles.bulletDot} />
-                  </LinearGradient>
-                </View>
-                <Text style={styles.capabilityText}>{capability}</Text>
+          </Animated.View>
+        </LinearGradient>
+        {/* Stats Section */}
+        <View style={styles.statsContainer}>
+          <View style={styles.statsGrid}>
+            {stats.map((stat, index) => (
+              <View key={index} style={styles.statCard}>
+                <Text style={styles.statIcon}>{stat.icon}</Text>
+                <Text style={styles.statValue}>{stat.value}</Text>
+                <Text style={styles.statLabel}>{stat.label}</Text>
               </View>
             ))}
           </View>
-          <TouchableOpacity style={styles.profileButton} onPress={() => router.push('/(tabs)/profile')}>
-            <LinearGradient colors={['#6366F1', '#8B5CF6']} style={styles.profileGradient}>
-              <Text style={styles.profileButtonText}>👤 Manage Profile</Text>
+        </View>
+        {/* Features Section */}
+        <View style={styles.featuresSection}>
+          <Text style={styles.sectionTitle}>Everything You Need</Text>
+          <Text style={styles.sectionSubtitle}>
+            Comprehensive tools designed specifically for campus life
+          </Text>
+          <View style={styles.featuresGrid}>
+            {features.map((feature, index) => (
+              <TouchableOpacity
+                key={feature.id}
+                style={styles.featureCard}
+                onPress={() => router.push(feature.route as any)}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={feature.gradient}
+                  style={styles.featureGradient}
+                  start={{x: 0, y: 0}}
+                  end={{x: 1, y: 1}}
+                >
+                  <View style={styles.featureIconContainer}>
+                    <LinearGradient colors={feature.gradient} style={styles.featureIcon}>
+                      <Text style={styles.featureIconText}>{feature.icon}</Text>
+                    </LinearGradient>
+                  </View>
+                  <Text style={styles.featureTitle}>{feature.title}</Text>
+                  <Text style={styles.featureDescription}>{feature.description}</Text>
+                  <View style={styles.featureFooter}>
+                    <View style={styles.statsTag}>
+                      <Text style={styles.statsTagText}>{feature.stats}</Text>
+                    </View>
+                    <Text style={styles.exploreText}>Explore →</Text>
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+        {/* Capabilities Section */}
+        <View style={styles.capabilitiesSection}>
+          <LinearGradient 
+            colors={['#ffffff', '#f8fafc']} 
+            style={styles.capabilitiesCard}
+          >
+            <Text style={styles.capabilitiesTitle}>What Makes Us Special?</Text>
+            <View style={styles.capabilitiesList}>
+              {capabilities.map((capability, index) => (
+                <View key={index} style={styles.capabilityItem}>
+                  <View style={styles.capabilityBullet}>
+                    <LinearGradient colors={['#10B981', '#34D399']} style={styles.bulletGradient}>
+                      <View style={styles.bulletDot} />
+                    </LinearGradient>
+                  </View>
+                  <Text style={styles.capabilityText}>{capability}</Text>
+                </View>
+              ))}
+            </View>
+            <TouchableOpacity style={styles.profileButton} onPress={() => router.push('/(tabs)/profile')}>
+              <LinearGradient colors={['#6366F1', '#8B5CF6']} style={styles.profileGradient}>
+                <Text style={styles.profileButtonText}>👤 Manage Profile</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </LinearGradient>
+        </View>
+        {/* Bottom CTA */}
+        <View style={styles.bottomCTA}>
+          <Text style={styles.bottomCTATitle}>Ready to get started?</Text>
+          <Text style={styles.bottomCTASubtitle}>
+            Join thousands of students already using our platform
+          </Text>
+          <TouchableOpacity style={styles.bottomCTAButton}>
+            <LinearGradient colors={['#667eea', '#764ba2']} style={styles.bottomCTAGradient}>
+              <Text style={styles.bottomCTAText}>Download App</Text>
             </LinearGradient>
           </TouchableOpacity>
-        </LinearGradient>
-      </View>
-      {/* Bottom CTA */}
-      <View style={styles.bottomCTA}>
-        <Text style={styles.bottomCTATitle}>Ready to get started?</Text>
-        <Text style={styles.bottomCTASubtitle}>
-          Join thousands of students already using our platform
-        </Text>
-        <TouchableOpacity style={styles.bottomCTAButton}>
-          <LinearGradient colors={['#667eea', '#764ba2']} style={styles.bottomCTAGradient}>
-            <Text style={styles.bottomCTAText}>Download App</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+  },
+  scrollContainer: {
     backgroundColor: '#f8fafc',
   },
   
   // Hero Section
   heroGradient: {
-    paddingTop: 60,
-    paddingBottom: 40,
-    paddingHorizontal: 20,
+    paddingTop: 30,
+    paddingBottom: 50,
+    paddingHorizontal: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
   },
   heroContent: {
     alignItems: 'center',
   },
   heroIconContainer: {
-    marginBottom: 20,
+    marginBottom: 24,
   },
   heroIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 20,
+    width: 100,
+    height: 100,
+    borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowRadius: 16,
+    elevation: 12,
   },
   heroIconText: {
-    fontSize: 40,
+    fontSize: 48,
   },
   heroTitle: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#ffffff',
+    fontSize: 36,
+    fontWeight: '800',
+    color: '#1E293B',
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   heroSubtitle: {
-    fontSize: 16,
-    color: '#e2e8f0',
+    fontSize: 18,
+    color: '#64748B',
     textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 30,
+    lineHeight: 26,
+    marginBottom: 36,
     paddingHorizontal: 20,
+    fontWeight: '500',
   },
   ctaButton: {
-    marginTop: 10,
+    marginTop: 16,
   },
   ctaGradient: {
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 25,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    paddingHorizontal: 40,
+    paddingVertical: 18,
+    borderRadius: 30,
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowRadius: 12,
+    elevation: 10,
   },
   ctaText: {
     color: '#ffffff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: '700',
   },
 
   // Stats Section
   statsContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 30,
+    paddingHorizontal: 24,
+    paddingVertical: 40,
   },
   statsGrid: {
     flexDirection: 'row',
@@ -297,91 +308,95 @@ const styles = StyleSheet.create({
   statCard: {
     width: width * 0.42,
     backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: 20,
+    padding: 24,
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: '#F8FAFC',
   },
   statIcon: {
-    fontSize: 24,
-    marginBottom: 8,
+    fontSize: 32,
+    marginBottom: 12,
   },
   statValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 28,
+    fontWeight: '800',
     color: '#1e293b',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   statLabel: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#64748b',
     fontWeight: '600',
+    textAlign: 'center',
   },
 
   // Features Section
   featuresSection: {
-    paddingHorizontal: 20,
-    paddingBottom: 30,
+    paddingHorizontal: 24,
+    paddingBottom: 40,
   },
   sectionTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: 32,
+    fontWeight: '800',
     color: '#1e293b',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   sectionSubtitle: {
-    fontSize: 16,
+    fontSize: 18,
     color: '#64748b',
     textAlign: 'center',
-    marginBottom: 30,
-    lineHeight: 22,
+    marginBottom: 36,
+    lineHeight: 26,
+    fontWeight: '500',
   },
   featuresGrid: {
-    gap: 16,
+    gap: 20,
   },
   featureCard: {
-    borderRadius: 20,
-    marginBottom: 4,
+    borderRadius: 24,
+    marginBottom: 6,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 12,
   },
   featureGradient: {
-    padding: 24,
-    borderRadius: 20,
+    padding: 28,
+    borderRadius: 24,
   },
   featureIconContainer: {
-    marginBottom: 16,
+    marginBottom: 20,
   },
   featureIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 14,
+    width: 64,
+    height: 64,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
   },
   featureIconText: {
-    fontSize: 24,
+    fontSize: 28,
   },
   featureTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 24,
+    fontWeight: '800',
     color: '#1e293b',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   featureDescription: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#475569',
-    lineHeight: 20,
-    marginBottom: 16,
+    lineHeight: 24,
+    marginBottom: 20,
   },
   featureFooter: {
     flexDirection: 'row',
@@ -389,122 +404,132 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statsTag: {
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 16,
   },
   statsTagText: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#475569',
-    fontWeight: '600',
+    fontWeight: '700',
   },
   exploreText: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#3b82f6',
-    fontWeight: 'bold',
+    fontWeight: '800',
   },
 
   // Capabilities Section
   capabilitiesSection: {
-    paddingHorizontal: 20,
-    paddingBottom: 30,
+    paddingHorizontal: 24,
+    paddingBottom: 40,
   },
   capabilitiesCard: {
-    borderRadius: 20,
-    padding: 24,
+    borderRadius: 24,
+    padding: 32,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 10,
   },
   capabilitiesTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 28,
+    fontWeight: '800',
     color: '#1e293b',
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: 32,
   },
   capabilitiesList: {
-    marginBottom: 24,
+    marginBottom: 32,
   },
   capabilityItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 16,
+    marginBottom: 20,
   },
   capabilityBullet: {
-    marginRight: 12,
-    marginTop: 2,
+    marginRight: 16,
+    marginTop: 4,
   },
   bulletGradient: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
   bulletDot: {
-    width: 6,
-    height: 6,
+    width: 8,
+    height: 8,
     backgroundColor: '#ffffff',
-    borderRadius: 3,
+    borderRadius: 4,
   },
   capabilityText: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#475569',
-    lineHeight: 20,
+    lineHeight: 24,
     flex: 1,
+    fontWeight: '500',
   },
   profileButton: {
     alignSelf: 'center',
   },
   profileGradient: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 20,
-  },
-  profileButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-
-  // Bottom CTA
-  bottomCTA: {
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-  },
-  bottomCTATitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1e293b',
-    marginBottom: 8,
-  },
-  bottomCTASubtitle: {
-    fontSize: 16,
-    color: '#64748b',
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  bottomCTAButton: {
-    width: width * 0.8,
-  },
-  bottomCTAGradient: {
+    paddingHorizontal: 32,
     paddingVertical: 16,
-    borderRadius: 25,
-    alignItems: 'center',
+    borderRadius: 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
   },
-  bottomCTAText: {
+  profileButtonText: {
     color: '#ffffff',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
+  },
+
+  // Bottom CTA
+  bottomCTA: {
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingBottom: 50,
+    paddingTop: 20,
+  },
+  bottomCTATitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#1e293b',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  bottomCTASubtitle: {
+    fontSize: 18,
+    color: '#64748b',
+    textAlign: 'center',
+    marginBottom: 32,
+    lineHeight: 26,
+    fontWeight: '500',
+  },
+  bottomCTAButton: {
+    width: width * 0.85,
+  },
+  bottomCTAGradient: {
+    paddingVertical: 20,
+    borderRadius: 30,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  bottomCTAText: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: '700',
   },
 });

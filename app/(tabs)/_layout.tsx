@@ -3,12 +3,11 @@ import { FontAwesome } from '@expo/vector-icons';
 
 export default function TabLayout() {
   return (
-    <Tabs screenOptions={{ headerShown: true }}>
+    <Tabs screenOptions={{ headerShown: false }}>
       <Tabs.Screen
         name="home" // Correctly points to app/(tabs)/home.tsx
         options={{
           title: 'Home',
-          headerShown:false,
           tabBarIcon: ({ color }) => <FontAwesome size={28} name="home" color={color} />,
         }}
       />
@@ -41,7 +40,6 @@ export default function TabLayout() {
         name="marketplace"
         options={{
           title: 'Marketplace',
-          headerShown:false,
           tabBarIcon: ({ color }) => <FontAwesome size={28} name="shopping-cart" color={color} />, // You can use another icon if you prefer
         }}
       />
@@ -50,6 +48,7 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: 'Profile',
+          href:null,
           tabBarIcon: ({ color }) => <FontAwesome size={28} name="user" color={color} />,
         }}
       />
