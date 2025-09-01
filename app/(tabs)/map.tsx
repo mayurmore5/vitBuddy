@@ -1,43 +1,43 @@
   import React, { useState, useEffect, useRef } from 'react';
   import {
-    View,
-    Text,
-    StyleSheet,
-    ActivityIndicator,
-    Modal,
-    TextInput,
-    TouchableOpacity,
-    Image,
-    Alert,
-    ScrollView,
-    Dimensions,
-    FlatList,
-    KeyboardAvoidingView,
-    Platform,
-  } from 'react-native';
-  import MapView, { Marker, LatLng, MapPressEvent } from 'react-native-maps';
-  import * as ImagePicker from 'expo-image-picker';
-  import * as Location from 'expo-location';
-  import { useNavigation } from '@react-navigation/native';
-  import {
-    collection,
-    addDoc,
-    onSnapshot,
-    query,
-    orderBy,
-    Timestamp,
-    doc,
-    deleteDoc,
-    getDoc,
-    setDoc,
-    where,
-    or,
-  } from 'firebase/firestore';
-  import { useAuth } from '../../contexts/AuthContext';
-  import { db } from '../../firbase.config';
-  import { getStorage, ref, uploadString, getDownloadURL } from 'firebase/storage';
-  import * as FileSystem from 'expo-file-system';
-  import CustomNavBar from '../../components/CustomNavBar';
+  View,
+  Text,
+  StyleSheet,
+  ActivityIndicator,
+  Modal,
+  TextInput,
+  TouchableOpacity,
+  Image,
+  Alert,
+  ScrollView,
+  Dimensions,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+} from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
+import { useNavigation } from '@react-navigation/native';
+import {
+  collection,
+  addDoc,
+  onSnapshot,
+  query,
+  orderBy,
+  Timestamp,
+  doc,
+  deleteDoc,
+  getDoc,
+  setDoc,
+  where,
+  or,
+} from 'firebase/firestore';
+import { useAuth } from '../../contexts/AuthContext';
+import { db } from '../../firbase.config';
+import { getStorage, ref, uploadString, getDownloadURL } from 'firebase/storage';
+import * as FileSystem from 'expo-file-system';
+import { WebView } from 'react-native-webview';
 
   // Define interfaces (assuming these are in a separate file or at the top)
   interface LostFoundItem {
@@ -52,6 +52,8 @@
     posterEmail: string | null;
     createdAt: Timestamp;
   }
+
+
 
   interface GeoapifyFeature {
     properties: {
@@ -75,14 +77,20 @@
   }
 
   interface ChatDetails {
-    itemId: string;
-    itemTitle: string;
-    posterUid: string;
-    posterEmail: string | null;
-    otherParticipantUid: string;
-    otherParticipantEmail: string | null;
-    otherParticipantUsername: string | null;
-  }
+  itemId: string;
+  itemTitle: string;
+  posterUid: string;
+  posterEmail: string | null;
+  otherParticipantUid: string;
+  otherParticipantEmail: string | null;
+  otherParticipantUsername: string | null;
+}
+
+// Define types for OpenStreetMap
+type LatLng = {
+  latitude: number;
+  longitude: number;
+};
 
   const { width, height } = Dimensions.get('window');
   const ASPECT_RATIO = width / height;
@@ -113,8 +121,8 @@
     const navigation = useNavigation();
 
     const [region, setRegion] = useState({
-      latitude: 12.84,
-      longitude: 80.15,
+      latitude: 37.78825,
+      longitude: -122.4324,
       latitudeDelta: LATITUDE_DELTA,
       longitudeDelta: LONGITUDE_DELTA,
     });
@@ -135,17 +143,44 @@
     const [suggestions, setSuggestions] = useState<GeoapifyFeature[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const searchTimeoutRef = useRef<number | null>(null);
-    const mapRef = useRef<MapView>(null);
+    const webViewRef = useRef<WebView>(null);
 
-    // --- NEW: Chat-related state, moved from ChatScreen ---
+    // Chat-related state
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [newMessageText, setNewMessageText] = useState('');
     const [sendingMessage, setSendingMessage] = useState(false);
     const messagesScrollViewRef = useRef<ScrollView>(null);
     const [currentChat, setCurrentChat] = useState<ChatDetails | null>(null);
     const [chatModalVisible, setChatModalVisible] = useState(false);
-    // --- END NEW ---
 
+    // Get current location
+    useEffect(() => {
+      const getCurrentLocation = async () => {
+        try {
+          const { status } = await Location.requestForegroundPermissionsAsync();
+          if (status !== 'granted') {
+            console.log('Location permission denied');
+            return;
+          }
+
+          const currentLocation = await Location.getCurrentPositionAsync({});
+          const newRegion = {
+            latitude: currentLocation.coords.latitude,
+            longitude: currentLocation.coords.longitude,
+            latitudeDelta: LATITUDE_DELTA,
+            longitudeDelta: LONGITUDE_DELTA,
+          };
+          setRegion(newRegion);
+          console.log('Current location set:', newRegion);
+        } catch (error) {
+          console.error('Error getting current location:', error);
+        }
+      };
+
+      getCurrentLocation();
+    }, []);
+
+    // Fetch lost/found items
     useEffect(() => {
       if (!db) {
         console.error("Firestore database (db) is not initialized.");
@@ -168,7 +203,7 @@
       return () => unsubscribe();
     }, [db]);
 
-    // --- NEW: Chat Message Listener, moved from ChatScreen ---
+    // Chat message listener
     useEffect(() => {
       if (!db || !currentChat || !user) {
         setMessages([]);
@@ -200,8 +235,8 @@
 
       return () => unsubscribe();
     }, [db, currentChat, user]);
-    // --- END NEW ---
 
+    // Search autocomplete
     const handleAutocomplete = async (text: string) => {
       setSearchQuery(text);
       if (searchTimeoutRef.current) {
@@ -243,9 +278,7 @@
         latitudeDelta: LATITUDE_DELTA,
         longitudeDelta: LONGITUDE_DELTA,
       };
-      if (mapRef.current) {
-        mapRef.current.animateToRegion(newRegion, 1000);
-      }
+      setRegion(newRegion);
       setSearchQuery(suggestion.properties.formatted);
       setSuggestions([]);
       setShowSuggestions(false);
@@ -253,16 +286,17 @@
       setModalVisible(true);
     };
 
-    const handleMapLongPress = (event: MapPressEvent) => {
+    // Handle map press (will be implemented with WebView communication)
+    const handleMapPress = (coordinate: LatLng) => {
       if (!user) {
         Alert.alert("Login Required", "You must be logged in to post a lost or found item.");
         return;
       }
-      setSelectedLocation(event.nativeEvent.coordinate);
+      setSelectedLocation(coordinate);
       setModalVisible(true);
     };
 
-    // --- NEW: handleMessagePoster now opens a modal on THIS screen ---
+    // Message poster handler
     const handleMessagePoster = async (item: LostFoundItem) => {
       if (!user) {
         Alert.alert("Login Required", "You must be logged in to message the poster.");
@@ -274,16 +308,15 @@
         return;
       }
 
-      setSelectedItem(null); // Close the item detail modal first
+      setSelectedItem(null);
       setItemDetailModalVisible(false);
 
       const otherParticipantUsername = await getUserDisplayName(item.posterUid);
 
-      // Set the current chat details and open the chat modal
       setCurrentChat({
         itemId: item.id,
         itemTitle: item.title,
-        posterUid: item.posterUid, // This is the person who posted the item
+        posterUid: item.posterUid,
         posterEmail: item.posterEmail,
         otherParticipantUid: item.posterUid,
         otherParticipantEmail: item.posterEmail,
@@ -292,6 +325,7 @@
       setChatModalVisible(true);
     };
 
+    // Image picker
     const pickImage = async () => {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
@@ -306,7 +340,6 @@
       });
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
-        console.log('Uploading asset:', asset); // Debug log
         setImageAsset({
           uri: asset.uri,
           type: asset.mimeType || 'image/jpeg',
@@ -316,15 +349,13 @@
       }
     };
 
+    // Upload image to Firebase
     const storage = getStorage();
-
     const uploadImageToFirebase = async (asset: { uri: string; type: string; fileName: string }, uid: string) => {
       try {
-        // Read the file as a base64 string
         const base64 = await FileSystem.readAsStringAsync(asset.uri, {
           encoding: FileSystem.EncodingType.Base64,
         });
-        // Upload the base64 string to Firebase Storage
         const imageRef = ref(storage, `lostFoundImages/${uid}/${Date.now()}_${asset.fileName}`);
         await uploadString(imageRef, base64, 'base64');
         const imageUrl = await getDownloadURL(imageRef);
@@ -336,6 +367,7 @@
       }
     };
 
+    // Save item
     const handleSaveItem = async () => {
       if (!user || !selectedLocation || !itemTitle.trim() || !itemDescription.trim()) {
         Alert.alert("Missing Information", "Please log in and fill in all details.");
@@ -374,6 +406,7 @@
       }
     };
 
+    // Delete item
     const handleDeleteItem = async () => {
       if (!selectedItem || !user || user.uid !== selectedItem.posterUid) {
         Alert.alert("Permission Denied", "You can only delete items you have posted.");
@@ -407,6 +440,7 @@
       );
     };
 
+    // Reset form
     const resetForm = () => {
       setModalVisible(false);
       setSelectedLocation(null);
@@ -419,12 +453,13 @@
       setShowSuggestions(false);
     };
 
+    // Handle marker press
     const handleMarkerPress = (item: LostFoundItem) => {
       setSelectedItem(item);
       setItemDetailModalVisible(true);
     };
 
-    // --- NEW: handleSendMessage, moved from ChatScreen ---
+    // Send message
     const handleSendMessage = async () => {
       if (!user || !currentChat || !newMessageText.trim()) {
         return;
@@ -477,7 +512,6 @@
         setSendingMessage(false);
       }
     };
-    // --- END NEW ---
 
     if (authLoading || fetchingItems) {
       return (
@@ -488,35 +522,62 @@
       );
     }
 
-    return (
-      <View style={styles.container}>
-        <MapView
-          ref={mapRef}
-          style={styles.map}
-          initialRegion={region}
-          onPress={handleMapLongPress}
-          showsUserLocation={true}
-          onRegionChangeComplete={setRegion}
-        >
-          {selectedLocation && (
-            <Marker
-              coordinate={selectedLocation}
-              title="New Item Location"
-              pinColor="blue"
-            />
-          )}
-          {items.map((item) => (
-            <Marker
-              key={item.id}
-              coordinate={{ latitude: item.latitude, longitude: item.longitude }}
-              title={item.title}
-              description={item.description}
-              onPress={() => handleMarkerPress(item)}
-              pinColor="red"
-            />
-          ))}
-        </MapView>
+    // Create HTML for OpenStreetMap with markers
+    const createMapHTML = () => {
+      const markers = items.map(item => `
+        L.marker([${item.latitude}, ${item.longitude}])
+          .addTo(map)
+          .bindPopup('<b>${item.title}</b><br>${item.description}')
+          .on('click', () => {
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+              type: 'markerClick',
+              itemId: '${item.id}'
+            }));
+          });
+      `).join('');
 
+      return `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+          <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+          <style>
+            body { margin: 0; padding: 0; }
+            #map { width: 100%; height: 100vh; }
+          </style>
+        </head>
+        <body>
+          <div id="map"></div>
+          <script>
+            var map = L.map('map').setView([${region.latitude}, ${region.longitude}], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+              attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+            
+            // Add markers for existing items
+            ${markers}
+            
+            // Handle map clicks
+            map.on('click', function(e) {
+              window.ReactNativeWebView.postMessage(JSON.stringify({
+                type: 'mapClick',
+                coordinate: {
+                  latitude: e.latlng.lat,
+                  longitude: e.latlng.lng
+                }
+              }));
+            });
+          </script>
+        </body>
+        </html>
+      `;
+    };
+
+    return (
+      <SafeAreaView style={styles.container}>
+        {/* Search Container */}
         <View style={styles.searchContainer}>
           <TextInput
             style={styles.searchInput}
@@ -542,6 +603,7 @@
           </TouchableOpacity>
         </View>
 
+        {/* Suggestions */}
         {showSuggestions && suggestions.length > 0 && (
           <View style={styles.suggestionsContainer}>
             <FlatList
@@ -561,6 +623,34 @@
             />
           </View>
         )}
+
+        {/* OpenStreetMap */}
+        <View style={styles.mapContainer}>
+          <WebView
+            ref={webViewRef}
+            style={styles.map}
+            source={{ html: createMapHTML() }}
+            onMessage={(event) => {
+              try {
+                const data = JSON.parse(event.nativeEvent.data);
+                if (data.type === 'mapClick') {
+                  handleMapPress(data.coordinate);
+                } else if (data.type === 'markerClick') {
+                  const item = items.find(i => i.id === data.itemId);
+                  if (item) {
+                    handleMarkerPress(item);
+                  }
+                }
+              } catch (error) {
+                console.error('Error parsing WebView message:', error);
+              }
+            }}
+            javaScriptEnabled={true}
+            domStorageEnabled={true}
+            startInLoadingState={true}
+            scalesPageToFit={true}
+          />
+        </View>
 
         {/* Item Detail Modal */}
         <Modal
@@ -671,7 +761,7 @@
           </View>
         </Modal>
 
-        {/* NEW: Chat Modal, moved from ChatScreen */}
+        {/* Chat Modal */}
         <Modal
           animationType="slide"
           transparent={true}
@@ -764,23 +854,31 @@
             </View>
           </KeyboardAvoidingView>
         </Modal>
-        {/* END NEW CHAT MODAL */}
-      </View>
+      </SafeAreaView>
     );
   };
 
   const styles = StyleSheet.create({
     container: {
       flex: 1,
+      backgroundColor: '#f0f0f0',
     },
     loadingContainer: {
       flex: 1,
       justifyContent: 'center',
       alignItems: 'center',
     },
-    map: {
+    mapContainer: {
+      flex: 1,
       width: '100%',
       height: '100%',
+      minHeight: 400,
+    },
+    map: {
+      flex: 1,
+      width: '100%',
+      height: '100%',
+      minHeight: 400,
     },
     modalOverlay: {
       flex: 1,
@@ -1069,6 +1167,23 @@
       marginTop: 15,
       backgroundColor: '#6c757d',
     },
+    fallbackContainer: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: '#f0f0f0',
+    },
+    fallbackText: {
+      fontSize: 18,
+      color: '#666',
+      marginBottom: 20,
+    },
   });
+
+
 
   export default MapScreen;

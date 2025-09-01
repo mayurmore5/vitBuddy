@@ -11,7 +11,12 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "This app needs access to your photo library to upload images."
+        "NSPhotoLibraryUsageDescription": "This app needs access to your photo library to upload images.",
+        "NSLocationWhenInUseUsageDescription": "This app needs access to location to show your position on the map and allow you to post lost/found items.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs access to location to show your position on the map and allow you to post lost/found items."
+      },
+      "config": {
+        "googleMapsApiKey": "AIzaSyBciMEkp74B9ZdvCdZ1qCr-vECCak4Po0s"
       }
     },
     "android": {
@@ -21,10 +26,14 @@
       },
       "config": {
         "googleMaps": {
-          "apiKey": "AIzaSyCNvsN8psakjRf9lKDbw_lDicE1iHS0aEU"
+          "apiKey": "AIzaSyBciMEkp74B9ZdvCdZ1qCr-vECCak4Po0s"
         }
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ]
     },
     "web": {
       "bundler": "metro",
