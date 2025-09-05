@@ -134,12 +134,6 @@ The app requires the following permissions:
 - **Camera/Photo Library**: For uploading item images
 - **Notifications**: For real-time updates and matches
 
-## 📊 Key Statistics
-
-- **50+** Active Students
-- **4** Campus Locations
-- **95%** Success Rate for Lost Items
-- **24/7** Support Available
 
 ## 🛡️ Security Features
 
