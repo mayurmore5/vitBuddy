@@ -9,24 +9,18 @@ Campus Lost & Found is a feature-rich mobile application designed specifically f
 ### Key Features
 
 #### 🔍 **Smart Lost & Found System**
-- AI-powered item matching and recommendations
 - Location-based lost item tracking with interactive maps
-- Real-time notifications for item matches
 - Photo upload and detailed item descriptions
 - Campus-specific communities and trending items
 
 #### 🛍️ **Peer-to-Peer Marketplace**
 - Buy and sell with fellow students in a trusted environment
-- Secure transactions with verified profiles
 - Image uploads and detailed product listings
 - Integrated chat for buyer-seller communication
-- Price negotiation and item status tracking
 
 #### 📚 **Study Hub & Collaboration**
 - Share notes, projects, and study materials
-- Collaborate with classmates on assignments
 - Resource library with search and categorization
-- Study group formation and management
 
 #### 💬 **Secure Messaging System**
 - Private chat with buyers, sellers, and study partners
