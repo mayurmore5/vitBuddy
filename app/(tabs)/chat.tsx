@@ -71,7 +71,7 @@ const getUserDisplayName = async (uid: string) => {
   } catch (error) {
     console.error("Error fetching user display name:", error);
     return null;
-  } 
+  }
 };
 
 const ChatScreen = () => {
@@ -93,7 +93,7 @@ const ChatScreen = () => {
       setMyActiveChats([]);
       return;
     }
-    
+
     setFetchingChats(true);
     const q = query(
       collection(db, 'chats'),
@@ -101,25 +101,38 @@ const ChatScreen = () => {
       orderBy('lastMessageAt', 'desc')
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
       // Optimized: Denormalized usernames are read directly from the chat document
-      const fetchedChats: ActiveChat[] = snapshot.docs.map((doc) => {
-        const data = doc.data();
-        const otherParticipantUid = data.participant1Uid === user.uid 
+      const fetchedChatsPromises = snapshot.docs.map(async (docSnapshot) => {
+        const data = docSnapshot.data();
+        const otherParticipantUid = data.participant1Uid === user.uid
           ? data.participant2Uid
           : data.participant1Uid;
 
-        const otherParticipantEmail = data.participant1Uid === user.uid 
-          ? data.participant2Email 
+        const otherParticipantEmail = data.participant1Uid === user.uid
+          ? data.participant2Email
           : data.participant1Email;
-        
+
         // Read the denormalized username
-        const otherParticipantUsername = data.participant1Uid === user.uid 
+        let otherParticipantUsername = data.participant1Uid === user.uid
           ? data.participant2Username
           : data.participant1Username;
 
+        // Fallback: If username is missing, fetch it
+        if (!otherParticipantUsername) {
+          const fetchedUsername = await getUserDisplayName(otherParticipantUid);
+          if (fetchedUsername) {
+            otherParticipantUsername = fetchedUsername;
+            // Update the chat document with the fetched username to avoid future fetches
+            const updateData = data.participant1Uid === user.uid
+              ? { participant2Username: fetchedUsername }
+              : { participant1Username: fetchedUsername };
+            setDoc(doc(db, 'chats', docSnapshot.id), updateData, { merge: true });
+          }
+        }
+
         return {
-          chatId: doc.id,
+          chatId: docSnapshot.id,
           itemId: data.itemId,
           itemTitle: data.itemTitle,
           otherParticipantEmail: otherParticipantEmail,
@@ -127,6 +140,8 @@ const ChatScreen = () => {
           lastMessageAt: data.lastMessageAt,
         };
       });
+
+      const fetchedChats = await Promise.all(fetchedChatsPromises);
       setMyActiveChats(fetchedChats);
       setFetchingChats(false);
     }, (error) => {
@@ -137,7 +152,6 @@ const ChatScreen = () => {
     return () => unsubscribe();
   }, [db, user]);
 
-  // --- Chat Message Listener ---
   useEffect(() => {
     if (!db || !currentChat || !user) {
       setMessages([]);
@@ -150,7 +164,7 @@ const ChatScreen = () => {
     const chatMessagesRef = collection(db, 'chats', chatDocId, 'messages');
     const q = query(chatMessagesRef, orderBy('createdAt', 'asc'));
 
-    const unsubscribe = onSnapshot(q, 
+    const unsubscribe = onSnapshot(q,
       (snapshot) => {
         const fetchedMessages: ChatMessage[] = [];
         snapshot.forEach((doc) => {
@@ -347,11 +361,11 @@ const ChatScreen = () => {
                     multiline
                     maxLength={500}
                   />
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={[
                       styles.sendButton,
                       (!newMessageText.trim() || sendingMessage) && styles.disabledButton
-                    ]} 
+                    ]}
                     onPress={handleSendMessage}
                     disabled={!newMessageText.trim() || sendingMessage}
                   >
@@ -558,8 +572,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
   },
-  buttonText:{
-    color:'#ffffff',
+  buttonText: {
+    color: '#ffffff',
   },
   chatCloseButton: {
     marginTop: 15,

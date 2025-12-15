@@ -14,10 +14,9 @@ interface UserProfile {
   // Add other profile fields as needed that you save to Firestore
 }
 
-// Define the shape of the AuthContext value
 interface AuthContextType {
   user: User | null;
-  userProfile: UserProfile | null; // Add userProfile to the context type
+  userProfile: UserProfile | null; 
   loading: boolean;
 }
 

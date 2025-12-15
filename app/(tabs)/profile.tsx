@@ -293,7 +293,7 @@ const ProfileScreen = () => {
                         onPress={() => Linking.openURL(normalizeUrl(item.pdfUri!))}
                         style={styles.linkButton}
                       >
-                        <Text style={styles.linkText}>📄 View PDF</Text>
+                        <Text style={styles.linkText}>📄 View </Text>
                       </TouchableOpacity>
                     )}
                     

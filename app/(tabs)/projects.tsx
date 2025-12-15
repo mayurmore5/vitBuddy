@@ -31,9 +31,31 @@ export default function ProjectsScreen() {
   const [description, setDescription] = useState('');
   const [pdfUri, setPdfUri] = useState('');
   const [github, setGithub] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   // Remove images state
 
   const storage = getStorage();
+
+  const filteredResources = resources.filter(resource =>
+    resource.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (resource.description && resource.description.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  // Function to get a user's display name
+  const getUserDisplayName = async (uid: string) => {
+    if (!db || !uid) return null;
+    try {
+      const userDocRef = firestoreDoc(db, 'users', uid);
+      const userDocSnap = await import('firebase/firestore').then(mod => mod.getDoc(userDocRef));
+      if (userDocSnap.exists() && userDocSnap.data().username) {
+        return userDocSnap.data().username;
+      }
+      return null;
+    } catch (error) {
+      console.error("Error fetching user display name:", error);
+      return null;
+    }
+  };
 
   useEffect(() => {
     const fetchResources = async () => {
@@ -41,9 +63,28 @@ export default function ProjectsScreen() {
       try {
         const q = query(collection(db, 'studyResources'), orderBy('createdAt', 'desc'));
         const snapshot = await getDocs(q);
-        const fetched: Resource[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Resource));
+
+        const fetchedPromises = snapshot.docs.map(async (docSnapshot) => {
+          const data = docSnapshot.data();
+          let authorName = data.author;
+
+          // Check if author is an email (contains @) and we have a uid
+          if (authorName && authorName.includes('@') && data.authorUid) {
+            const username = await getUserDisplayName(data.authorUid);
+            if (username) {
+              authorName = username;
+              // Update Firestore to persist the fix
+              await import('firebase/firestore').then(mod => mod.setDoc(firestoreDoc(db, 'studyResources', docSnapshot.id), { author: username }, { merge: true }));
+            }
+          }
+
+          return { id: docSnapshot.id, ...data, author: authorName } as Resource;
+        });
+
+        const fetched = await Promise.all(fetchedPromises);
         setResources(fetched);
       } catch (err) {
+        console.error("Error fetching resources:", err);
         Alert.alert('Error', 'Failed to fetch resources.');
       } finally {
         setLoading(false);
@@ -69,15 +110,22 @@ export default function ProjectsScreen() {
       return;
     }
     try {
+      let authorName = user?.email || 'You';
+      if (user?.uid) {
+        const username = await getUserDisplayName(user.uid);
+        if (username) {
+          authorName = username;
+        }
+      }
+
       const docRef = await addDoc(collection(db, 'studyResources'), {
         title,
-        author: user?.email || 'You',
+        author: authorName,
         authorUid: user?.uid || '',
         type: shareType,
         description,
         pdfUri: shareType === 'Notes' ? pdfUri.trim() : null,
         github: shareType === 'Project' ? github : null,
-        // images removed
         createdAt: serverTimestamp(),
       });
       setModalVisible(false);
@@ -85,12 +133,18 @@ export default function ProjectsScreen() {
       setDescription('');
       setPdfUri('');
       setGithub('');
-      // Remove images state
-      // Refetch resources
+
+      // Refetch resources to update the list
       const q = query(collection(db, 'studyResources'), orderBy('createdAt', 'desc'));
       const snapshot = await getDocs(q);
-      const fetched: Resource[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Resource));
+      const fetchedPromises = snapshot.docs.map(async (docSnapshot) => {
+        const data = docSnapshot.data();
+        // We can assume the new one is correct, but good to keep consistent logic or just simple map if we trust the list update
+        return { id: docSnapshot.id, ...data } as Resource;
+      });
+      const fetched = await Promise.all(fetchedPromises);
       setResources(fetched);
+
     } catch (err) {
       console.error('Upload error:', err);
       Alert.alert('Error', 'Failed to share resource.');
@@ -101,11 +155,20 @@ export default function ProjectsScreen() {
     <View style={styles.container}>
       <CustomNavBar title="Study Hub" />
       {/* Simple Header */}
-      
+      <View style={styles.simpleHeader}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search resources..."
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholderTextColor="#9CA3AF"
+        />
+      </View>
+
 
       {/* Floating Action Button */}
-      <TouchableOpacity 
-        style={styles.fab} 
+      <TouchableOpacity
+        style={styles.fab}
         onPress={() => {
           handleShare();
         }}
@@ -120,9 +183,21 @@ export default function ProjectsScreen() {
       <Text style={styles.sectionTitle}>Shared Resources</Text>
       {loading ? (
         <ActivityIndicator size="large" color="#45B7D1" style={{ marginTop: 30 }} />
+      ) : filteredResources.length === 0 && searchQuery ? (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyStateIcon}>🔍</Text>
+          <Text style={styles.emptyStateTitle}>No matches found</Text>
+          <Text style={styles.emptyStateText}>Try a different search term</Text>
+        </View>
+      ) : filteredResources.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyStateIcon}>📚</Text>
+          <Text style={styles.emptyStateTitle}>No resources yet</Text>
+          <Text style={styles.emptyStateText}>Be the first to share a note or project!</Text>
+        </View>
       ) : (
         <FlatList
-          data={resources}
+          data={filteredResources}
           keyExtractor={item => item.id}
           contentContainerStyle={styles.resourcesList}
           renderItem={({ item }) => (
@@ -437,17 +512,43 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   simpleHeader: {
-    paddingTop: 20,
-    paddingBottom: 16,
+    paddingTop: 10,
+    paddingBottom: 10,
     paddingHorizontal: 20,
-    alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },
-  simpleTitle: {
+  searchInput: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#1F2937',
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+    paddingVertical: 60,
+  },
+  emptyStateIcon: {
+    fontSize: 80,
+    marginBottom: 24,
+  },
+  emptyStateTitle: {
     fontSize: 28,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#1E293B',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  emptyStateText: {
+    fontSize: 18,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 26,
   },
 });

@@ -23,19 +23,21 @@ const LoginScreen = () => {
   // --- Google Sign-In Logic ---
   const [request, response, promptAsync] = Google.useAuthRequest({
     clientId: GOOGLE_WEB_CLIENT_ID,
-    // The redirect URI is automatically generated for Expo Go
-    // For standalone builds, you need to configure this in the Firebase console.
-    // const redirectUri = makeRedirectUri({
-    //   scheme: 'com.yourcompany.yourappname'
-    // });
-    // redirectUri: redirectUri,
+    // Explicitly set the redirect URI to avoid mismatches
+    // For Expo Go, this might still be tricky, but logging it helps.
   });
+
+  useEffect(() => {
+    if (request) {
+      console.log("Google Auth Request Ready. Redirect URI:", request.redirectUri);
+    }
+  }, [request]);
 
   useEffect(() => {
     if (response?.type === 'success') {
       const { id_token } = response.params;
       const credential = GoogleAuthProvider.credential(id_token);
-      
+
       // Use the Firebase sign-in method with the Google credential
       signInWithCredential(auth, credential)
         .then(() => {
@@ -48,7 +50,9 @@ const LoginScreen = () => {
         });
     } else if (response?.type === 'error') {
       console.error("Google Sign-In Error:", response.error);
-      Alert.alert("Google Sign-In Failed", "Something went wrong during authentication.");
+      console.error("Google Sign-In Error Code:", response.error?.code);
+      console.error("Google Sign-In Error Description:", response.error?.description);
+      Alert.alert("Google Sign-In Failed", `Error: ${response.error?.code || 'Unknown'} - ${response.error?.description || 'Check console for details'}`);
     }
   }, [response]);
 
@@ -87,7 +91,7 @@ const LoginScreen = () => {
       />
       <Button title={loading ? "Logging in..." : "Login"} onPress={handleLogin} disabled={loading} />
       {loading && <ActivityIndicator style={styles.activityIndicator} size="small" color="#0000ff" />}
-      
+
       <Text style={styles.divider}>OR</Text>
 
       {/* NEW: Google Sign-In Button */}

@@ -94,7 +94,7 @@ type LatLng = {
 
   const { width, height } = Dimensions.get('window');
   const ASPECT_RATIO = width / height;
-  const LATITUDE_DELTA = 0.0535;
+  const LATITUDE_DELTA = 0.01;  // Smaller value for more zoomed-in view
   const LONGITUDE_DELTA = LATITUDE_DELTA * ASPECT_RATIO;
 
   const GEOAPIFY_API_KEY = 'e2ffdb8a5b2b41d38b49e0c74dd18c12';
@@ -121,8 +121,8 @@ type LatLng = {
     const navigation = useNavigation();
 
     const [region, setRegion] = useState({
-      latitude: 37.78825,
-      longitude: -122.4324,
+      latitude: 12.9716,  // VIT Chennai latitude (corrected)
+      longitude: 80.0383, // VIT Chennai longitude (corrected)
       latitudeDelta: LATITUDE_DELTA,
       longitudeDelta: LONGITUDE_DELTA,
     });
@@ -153,32 +153,48 @@ type LatLng = {
     const [currentChat, setCurrentChat] = useState<ChatDetails | null>(null);
     const [chatModalVisible, setChatModalVisible] = useState(false);
 
-    // Get current location
-    useEffect(() => {
-      const getCurrentLocation = async () => {
-        try {
-          const { status } = await Location.requestForegroundPermissionsAsync();
-          if (status !== 'granted') {
-            console.log('Location permission denied');
-            return;
-          }
-
-          const currentLocation = await Location.getCurrentPositionAsync({});
-          const newRegion = {
-            latitude: currentLocation.coords.latitude,
-            longitude: currentLocation.coords.longitude,
-            latitudeDelta: LATITUDE_DELTA,
-            longitudeDelta: LONGITUDE_DELTA,
-          };
-          setRegion(newRegion);
-          console.log('Current location set:', newRegion);
-        } catch (error) {
-          console.error('Error getting current location:', error);
+    // Get current location - only when explicitly requested
+    const getCurrentLocation = async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission Denied', 'Location permission is required to find your current location.');
+          return;
         }
+
+        setFetchingItems(true);
+        const currentLocation = await Location.getCurrentPositionAsync({});
+        const newRegion = {
+          latitude: currentLocation.coords.latitude,
+          longitude: currentLocation.coords.longitude,
+          latitudeDelta: LATITUDE_DELTA,
+          longitudeDelta: LONGITUDE_DELTA,
+        };
+        setRegion(newRegion);
+        console.log('Current location set:', newRegion);
+      } catch (error) {
+        console.error('Error getting current location:', error);
+        Alert.alert('Error', 'Could not get your current location. Please try again.');
+      } finally {
+        setFetchingItems(false);
+      }
+    };
+
+    // Set initial region to VIT Chennai on component mount
+    useEffect(() => {
+      const setInitialRegion = () => {
+        const vitChennaiRegion = {
+          latitude: 12.9716,  // VIT Chennai latitude
+          longitude: 80.0383, // VIT Chennai longitude
+          latitudeDelta: LATITUDE_DELTA,
+          longitudeDelta: LONGITUDE_DELTA,
+        };
+        setRegion(vitChennaiRegion);
+        console.log('Initial region set to VIT Chennai:', vitChennaiRegion);
       };
 
-      getCurrentLocation();
-    }, []);
+      setInitialRegion();
+    }, []); // Empty dependency array means this runs once on mount
 
     // Fetch lost/found items
     useEffect(() => {
@@ -236,7 +252,6 @@ type LatLng = {
       return () => unsubscribe();
     }, [db, currentChat, user]);
 
-    // Search autocomplete
     const handleAutocomplete = async (text: string) => {
       setSearchQuery(text);
       if (searchTimeoutRef.current) {
@@ -548,10 +563,23 @@ type LatLng = {
             #map { width: 100%; height: 100vh; }
           </style>
         </head>
+        <style>
+          .leaflet-control-zoom {
+            margin-top: 100px !important;  /* Add top margin to move controls down */
+          }
+        </style>
         <body>
           <div id="map"></div>
           <script>
-            var map = L.map('map').setView([${region.latitude}, ${region.longitude}], 13);
+            var map = L.map('map', {
+              zoomControl: false  // Disable default zoom control
+            }).setView([${region.latitude}, ${region.longitude}], 13);
+            
+            // Add custom positioned zoom control
+            L.control.zoom({
+              position: 'topleft'
+            }).addTo(map);
+            
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
               attribution: '© OpenStreetMap contributors'
             }).addTo(map);
@@ -732,9 +760,7 @@ type LatLng = {
                 onChangeText={setItemDescription}
                 multiline
               />
-              <TouchableOpacity style={styles.imagePickerButton} onPress={pickImage}>
-                <Text style={styles.imagePickerButtonText}>Pick an Image</Text>
-              </TouchableOpacity>
+              
               {image && <Image source={{ uri: image }} style={styles.previewImage} />}
 
               <View style={styles.modalButtonContainer}>

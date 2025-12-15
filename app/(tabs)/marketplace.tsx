@@ -49,6 +49,7 @@ const MarketplaceScreen = () => {
   const [newPrice, setNewPrice] = useState('');
   const [newDescription, setNewDescription] = useState('');
   const [newImage, setNewImage] = useState<string | null>(null);
+  const [newImageBase64, setNewImageBase64] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const { user } = useAuth();
   const [selectedItem, setSelectedItem] = useState<MarketplaceItem | null>(null);
@@ -59,6 +60,12 @@ const MarketplaceScreen = () => {
   const [sendingMessage, setSendingMessage] = useState(false);
   const messagesScrollViewRef = React.useRef<ScrollView>(null);
   const [chatHeader, setChatHeader] = useState<{ sellerName: string | null }>({ sellerName: null });
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredItems = items.filter(item =>
+    item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
 
   useEffect(() => {
     const q = query(collection(db, 'marketplaceItems'), orderBy('createdAt', 'desc'));
@@ -93,13 +100,15 @@ const MarketplaceScreen = () => {
       return;
     }
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: 'images',
       allowsEditing: true,
       aspect: [4, 3],
-      quality: 0.7,
+      quality: 0.2, // Reduce quality significantly to ensure it fits in Firestore (max 1MB)
+      base64: true, // Request base64
     });
     if (!result.canceled && result.assets && result.assets.length > 0) {
       setNewImage(result.assets[0].uri);
+      setNewImageBase64(result.assets[0].base64 || null);
     }
   };
 
@@ -115,8 +124,17 @@ const MarketplaceScreen = () => {
     setUploading(true);
     let imageUrl = null;
     try {
-      // For now, just use the local URI. In production, upload to Firebase Storage and get a URL.
-      imageUrl = newImage;
+      if (newImageBase64) {
+        // Firestore limit is 1,048,576 bytes. Base64 is ~33% larger than binary.
+        // We leave some buffer for other fields.
+        if (newImageBase64.length > 1000000) {
+          Alert.alert('Image Too Large', 'The selected image is too large to save. Please choose a smaller image.');
+          setUploading(false);
+          return;
+        }
+        imageUrl = `data:image/jpeg;base64,${newImageBase64}`;
+      }
+
       await addDoc(collection(db, 'marketplaceItems'), {
         title: newTitle.trim(),
         price: parseFloat(newPrice),
@@ -130,8 +148,10 @@ const MarketplaceScreen = () => {
       setNewPrice('');
       setNewDescription('');
       setNewImage(null);
+      setNewImageBase64(null);
       Alert.alert('Success', 'Item posted!');
     } catch (error: any) {
+      console.error("Error posting item:", error);
       Alert.alert('Error', error.message || 'Failed to post item.');
     } finally {
       setUploading(false);
@@ -166,16 +186,20 @@ const MarketplaceScreen = () => {
 
   const handleSendMessage = async () => {
     if (!user || !selectedItem || !newMessageText.trim()) return;
+    if (!selectedItem.posterUid) return;
     if (selectedItem.posterUid === user.uid) return;
     setSendingMessage(true);
     const messageText = newMessageText.trim();
     setNewMessageText('');
     try {
-      const participants = [user.uid, selectedItem.posterUid].sort();
+      const participants = [user.uid, selectedItem.posterUid!].sort();
       const chatDocId = `${selectedItem.id}_${participants[0]}_${participants[1]}`;
       const chatDocRef = doc(db, 'chats', chatDocId);
       const chatDocSnapshot = await getDoc(chatDocRef);
       if (!chatDocSnapshot.exists()) {
+        const myUsername = await getUserDisplayName(user.uid);
+        const sellerUsername = await getUserDisplayName(selectedItem.posterUid!);
+
         await setDoc(chatDocRef, {
           itemId: selectedItem.id,
           itemTitle: selectedItem.title,
@@ -183,6 +207,8 @@ const MarketplaceScreen = () => {
           participant2Uid: participants[1],
           participant1Email: participants[0] === user.uid ? user.email : null,
           participant2Email: participants[1] === user.uid ? user.email : null,
+          participant1Username: participants[0] === user.uid ? myUsername : sellerUsername,
+          participant2Username: participants[1] === user.uid ? myUsername : sellerUsername,
           createdAt: Timestamp.now(),
         });
       }
@@ -219,11 +245,18 @@ const MarketplaceScreen = () => {
       {/* Simple Header */}
       <View style={styles.simpleHeader}>
         <Text style={styles.simpleTitle}>Discover Amazing Deals</Text>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search items..."
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholderTextColor="#9CA3AF"
+        />
       </View>
 
       {/* Floating Action Button */}
-      <TouchableOpacity 
-        style={styles.fab} 
+      <TouchableOpacity
+        style={styles.fab}
         onPress={() => {
           setModalVisible(true);
         }}
@@ -246,7 +279,7 @@ const MarketplaceScreen = () => {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>List New Item</Text>
             <Text style={styles.modalSubtitle}>Add details about your item</Text>
-            
+
             <TextInput
               style={styles.input}
               placeholder="What are you selling?"
@@ -276,7 +309,7 @@ const MarketplaceScreen = () => {
               </Text>
             </TouchableOpacity>
             {newImage && <Image source={{ uri: newImage }} style={styles.previewImage} />}
-            
+
             <View style={styles.modalButtonContainer}>
               <TouchableOpacity
                 style={[styles.primaryButton, uploading && styles.disabledButton]}
@@ -320,17 +353,17 @@ const MarketplaceScreen = () => {
                     <Text style={styles.detailDescription}>{selectedItem.description}</Text>
                   )}
                 </View>
-                
+
                 <View style={styles.detailActions}>
                   {user && selectedItem.posterUid !== user.uid && (
-                    <TouchableOpacity 
-                      style={styles.chatButton} 
+                    <TouchableOpacity
+                      style={styles.chatButton}
                       onPress={() => setChatModalVisible(true)}
                     >
                       <Text style={styles.chatButtonText}>💬 Message Seller</Text>
                     </TouchableOpacity>
                   )}
-                  
+
                   {user && selectedItem.posterUid === user.uid && (
                     <View style={styles.ownerSection}>
                       <Text style={styles.ownerText}>✨ Your listing</Text>
@@ -339,15 +372,17 @@ const MarketplaceScreen = () => {
                         onPress={async () => {
                           Alert.alert('Remove Listing', 'Are you sure you want to remove this listing?', [
                             { text: 'Cancel', style: 'cancel' },
-                            { text: 'Remove', style: 'destructive', onPress: async () => {
-                              try {
-                                await deleteDoc(doc(db, 'marketplaceItems', selectedItem.id));
-                                setDetailModalVisible(false);
-                                Alert.alert('Removed', 'Listing removed successfully.');
-                              } catch (err) {
-                                Alert.alert('Error', 'Failed to remove listing.');
+                            {
+                              text: 'Remove', style: 'destructive', onPress: async () => {
+                                try {
+                                  await deleteDoc(doc(db, 'marketplaceItems', selectedItem.id));
+                                  setDetailModalVisible(false);
+                                  Alert.alert('Removed', 'Listing removed successfully.');
+                                } catch (err) {
+                                  Alert.alert('Error', 'Failed to remove listing.');
+                                }
                               }
-                            }}
+                            }
                           ]);
                         }}
                       >
@@ -356,9 +391,9 @@ const MarketplaceScreen = () => {
                     </View>
                   )}
                 </View>
-                
-                <TouchableOpacity 
-                  style={styles.closeButton} 
+
+                <TouchableOpacity
+                  style={styles.closeButton}
                   onPress={() => setDetailModalVisible(false)}
                 >
                   <Text style={styles.closeButtonText}>Close</Text>
@@ -387,7 +422,7 @@ const MarketplaceScreen = () => {
               </Text>
               <Text style={styles.chatSubTitle}>About: {selectedItem?.title}</Text>
             </View>
-            
+
             <ScrollView
               ref={messagesScrollViewRef}
               style={styles.messagesContainer}
@@ -420,7 +455,7 @@ const MarketplaceScreen = () => {
                 ))
               )}
             </ScrollView>
-            
+
             <View style={styles.messageInputContainer}>
               <TextInput
                 style={styles.messageInput}
@@ -446,7 +481,7 @@ const MarketplaceScreen = () => {
                 )}
               </TouchableOpacity>
             </View>
-            
+
             <TouchableOpacity
               style={styles.chatCloseButton}
               onPress={() => setChatModalVisible(false)}
@@ -458,7 +493,13 @@ const MarketplaceScreen = () => {
       </Modal>
 
       {/* Items List */}
-      {items.length === 0 ? (
+      {filteredItems.length === 0 && searchQuery ? (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyStateIcon}>🔍</Text>
+          <Text style={styles.emptyStateTitle}>No matches found</Text>
+          <Text style={styles.emptyStateText}>Try a different search term</Text>
+        </View>
+      ) : filteredItems.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyStateIcon}>🛍️</Text>
           <Text style={styles.emptyStateTitle}>No items yet</Text>
@@ -466,12 +507,12 @@ const MarketplaceScreen = () => {
         </View>
       ) : (
         <FlatList
-          data={items}
+          data={filteredItems}
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContainer}
           renderItem={({ item }) => (
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => { setSelectedItem(item); setDetailModalVisible(true); }}
               activeOpacity={0.9}
             >
@@ -503,6 +544,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  searchInput: {
+    marginTop: 15,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#1F2937',
   },
   loadingContainer: {
     flex: 1,
